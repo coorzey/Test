@@ -1,7 +1,6 @@
 -- ==========================================  
--- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: 2 SHEET + MINI HUD + WEBHOOK + MINIMIZE
--- SEMUA FITUR AWAL DIKEMBALIKAN 100%
+-- V58.6 FINAL REBORN - NPC PURGE FIXED
+-- UPDATE: AGGRESSIVE NPC & TRAFFIC CLEANER
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -13,12 +12,6 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
 
--- [CORE: ANTI-AFK & OPTIMIZATION]
-for _, v in pairs(getconnections(LP.Idled)) do v:Disable() end
-task.spawn(function()
-    while task.wait(60) do collectgarbage("collect") end
-end)
-
 -- [GLOBALS]
 local running, isMinimized = false, false
 local renderingEnabled = true
@@ -26,7 +19,7 @@ local currentSheet = 1
 local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 
--- [WEBHOOK CONFIG]
+-- [WEBHOOK]
 local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
 local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
 
@@ -45,7 +38,35 @@ local path = {
     {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
 }
 
--- [FUNCTIONS: ASLI]
+-- [[ FUNGSI PURGE ASLI (RE-FIXED) ]]
+local function applyDeepClean()
+    pcall(function()
+        settings().Rendering.QualityLevel = 1
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        
+        for _, v in pairs(Workspace:GetDescendants()) do
+            local name = v.Name:lower()
+            -- MENGHAPUS SEMUA NPC, TRAFFIC, DAN MOBIL LAIN
+            if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") or name:find("vehicle") then
+                if not v:IsDescendantOf(LP.Character) and not v:IsDescendantOf(Workspace.CurrentCamera) then
+                    v:Destroy()
+                end
+            -- MENGHAPUS OBJEK LINGKUNGAN BERAT
+            elseif v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
+                v.Material = Enum.Material.SmoothPlastic
+                v.CastShadow = false
+                if name:find("tree") or name:find("grass") or name:find("bush") or name:find("leaf") then
+                    v:Destroy()
+                end
+            -- MENGHAPUS EFEK VISUAL
+            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                v:Destroy()
+            end
+        end
+    end)
+end
+
 local function getPlayerMoney()   
     local leaderstats = LP:FindFirstChild("leaderstats")   
     if leaderstats then   
@@ -65,29 +86,9 @@ local function sendWebhook(url, gain, total, races, isOffline)
                 {["name"] = "Race Profit", ["value"] = "$" .. tostring(gain), ["inline"] = true},
                 {["name"] = "Total Profit", ["value"] = "$" .. tostring(total), ["inline"] = true},
                 {["name"] = "Races", ["value"] = tostring(races), ["inline"] = true},
-            },
-            ["footer"] = {["text"] = "V58.6 • " .. os.date("%X")},
-            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            }
         }}}
-        local payload = HttpService:JSONEncode(data)
-        if httpRequest then
-            httpRequest({Url = url, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = payload})
-        end
-    end)
-end
-
-local function applyDeepClean()
-    pcall(function()
-        settings().Rendering.QualityLevel = 1
-        Lighting.GlobalShadows = false
-        for _, v in pairs(Workspace:GetDescendants()) do
-            local name = v.Name:lower()
-            if v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
-                v.Material = Enum.Material.SmoothPlastic
-                v.CastShadow = false
-                if name:find("tree") or name:find("grass") or name:find("traffic") then v:Destroy() end
-            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") then v:Destroy() end
-        end
+        if httpRequest then httpRequest({Url = url, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)}) end
     end)
 end
 
@@ -95,29 +96,23 @@ end
 if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
 local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.ResetOnSpawn = false
 
--- MAIN FRAME
 local frame = Instance.new("Frame", sg)   
 frame.Size = UDim2.new(0, 260, 0, 230); frame.Position = UDim2.new(0.5, -130, 0.4, 0); frame.BackgroundColor3 = Color3.fromRGB(18,18,18); frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
 Instance.new("UICorner", frame)
 Instance.new("UIStroke", frame).Color = Color3.fromRGB(45,45,45)
 
--- HEADER & MINIMIZE
 local header = Instance.new("Frame", frame); header.Size = UDim2.new(1, 0, 0, 35); header.BackgroundTransparency = 1
-local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(1, -40, 1, 0); rgbLabel.Position = UDim2.new(0, 12, 0, 0); rgbLabel.Text = "CORRZEY HUB V58.6"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = "GothamBold"; rgbLabel.TextSize = 12; rgbLabel.TextXAlignment = "Left"
+local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(1, -40, 1, 0); rgbLabel.Position = UDim2.new(0, 12, 0, 0); rgbLabel.Text = "CORRZEY HUB V58.6"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = "GothamBold"; rgbLabel.TextSize = 11; rgbLabel.TextColor3 = Color3.new(1,1,1); rgbLabel.TextXAlignment = "Left"
 task.spawn(function() while true do for i = 0, 1, 0.01 do rgbLabel.TextColor3 = Color3.fromHSV(i, 1, 1) task.wait(0.03) end end end)
 
 local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.Font = "GothamBold"; toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", toggleBtn)
 
--- MINI HUD (PENGHASILAN)
+-- MINI HUD
 local miniHud = Instance.new("Frame", sg); miniHud.Size = UDim2.new(0, 130, 0, 65); miniHud.Position = UDim2.new(0, 10, 0.02, 0); miniHud.BackgroundColor3 = Color3.fromRGB(10,10,10); miniHud.Draggable = true; miniHud.Active = true; Instance.new("UICorner", miniHud)
 Instance.new("UIStroke", miniHud).Color = Color3.fromRGB(255, 215, 0)
-
-local function createHudLbl(txt, col, pos)
-    local l = Instance.new("TextLabel", miniHud); l.Size = UDim2.new(1, -20, 0, 20); l.Position = UDim2.new(0, 10, 0, pos); l.Text = txt; l.TextColor3 = col; l.Font = "GothamBold"; l.TextSize = 10; l.BackgroundTransparency = 1; l.TextXAlignment = "Left"; return l
-end
-local moneyLabel = createHudLbl("Profit: $0", Color3.fromRGB(255, 215, 0), 5)
-local raceLabel = createHudLbl("Races: 0", Color3.new(1,1,1), 23)
-local fpsLabel = createHudLbl("FPS: Active", Color3.fromRGB(0, 255, 255), 41)
+local moneyLabel = Instance.new("TextLabel", miniHud); moneyLabel.Size = UDim2.new(1, -20, 0, 20); moneyLabel.Position = UDim2.new(0, 10, 0, 5); moneyLabel.Text = "Profit: $0"; moneyLabel.TextColor3 = Color3.fromRGB(255, 215, 0); moneyLabel.BackgroundTransparency = 1; moneyLabel.Font = "GothamBold"; moneyLabel.TextSize = 10; moneyLabel.TextXAlignment = "Left"
+local raceLabel = Instance.new("TextLabel", miniHud); raceLabel.Size = UDim2.new(1, -20, 0, 20); raceLabel.Position = UDim2.new(0, 10, 0, 23); raceLabel.Text = "Races: 0"; raceLabel.TextColor3 = Color3.new(1,1,1); raceLabel.BackgroundTransparency = 1; raceLabel.Font = "GothamBold"; raceLabel.TextSize = 10; raceLabel.TextXAlignment = "Left"
+local fpsLabel = Instance.new("TextLabel", miniHud); fpsLabel.Size = UDim2.new(1, -20, 0, 20); fpsLabel.Position = UDim2.new(0, 10, 0, 41); fpsLabel.Text = "FPS: Active"; fpsLabel.TextColor3 = Color3.fromRGB(0, 255, 255); fpsLabel.BackgroundTransparency = 1; fpsLabel.Font = "GothamBold"; fpsLabel.TextSize = 10; fpsLabel.TextXAlignment = "Left"
 
 -- TABS
 local tabHolder = Instance.new("Frame", frame); tabHolder.Size = UDim2.new(1, -20, 0, 30); tabHolder.Position = UDim2.new(0, 10, 0, 40); tabHolder.BackgroundTransparency = 1
@@ -130,6 +125,7 @@ local layout1 = Instance.new("UIListLayout", container1); layout1.Padding = UDim
 
 -- SHEET 1 CONTENT
 local statusLbl = Instance.new("TextLabel", container1); statusLbl.Size = UDim2.new(1, 0, 0, 20); statusLbl.Text = "● STATUS: READY"; statusLbl.TextColor3 = Color3.fromRGB(0, 255, 150); statusLbl.BackgroundTransparency = 1; statusLbl.Font = "GothamBold"; statusLbl.TextSize = 10
+
 local function createBtn(txt, color, parent)
     local b = Instance.new("TextButton", parent); b.Size = UDim2.new(1, 0, 0, 32); b.BackgroundColor3 = color; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = "GothamBold"; b.TextSize = 10; Instance.new("UICorner", b)
     return b
@@ -138,7 +134,7 @@ local farmBtn = createBtn("START FARMING", Color3.fromRGB(0, 120, 255), containe
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", Color3.fromRGB(35,35,35), container1)
 local cpuBtn = createBtn("NEON DARK: OFF", Color3.fromRGB(35,35,35), container1)
 
--- [[ LOGIKA UTAMA: AUTO FARM ]]
+-- [[ LOGIKA AUTO FARM ]]
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -148,7 +144,7 @@ task.spawn(function()
             if seat and seat:IsA("VehicleSeat") then
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 
-                applyDeepClean()
+                applyDeepClean() -- AUTO PURGE SAAT RACE
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
                 
@@ -199,7 +195,7 @@ task.spawn(function()
     end
 end)
 
--- [[ UI EVENTS ]]
+-- [[ EVENTS ]]
 toggleBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     container1.Visible = not isMinimized and (currentSheet == 1)
@@ -211,20 +207,25 @@ end)
 
 sheet1Btn.MouseButton1Click:Connect(function()
     currentSheet = 1; container1.Visible = true; container2.Visible = false
-    sheet1Btn.BackgroundColor3 = Color3.fromRGB(35,35,35); sheet1Btn.TextColor3 = Color3.new(1,1,1)
-    sheet2Btn.BackgroundColor3 = Color3.fromRGB(25,25,25); sheet2Btn.TextColor3 = Color3.new(0.6,0.6,0.6)
+    sheet1Btn.BackgroundColor3 = Color3.fromRGB(35,35,35); sheet2Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
 end)
 
 sheet2Btn.MouseButton1Click:Connect(function()
     currentSheet = 2; container1.Visible = false; container2.Visible = true
-    sheet2Btn.BackgroundColor3 = Color3.fromRGB(35,35,35); sheet2Btn.TextColor3 = Color3.new(1,1,1)
-    sheet1Btn.BackgroundColor3 = Color3.fromRGB(25,25,25); sheet1Btn.TextColor3 = Color3.new(0.6,0.6,0.6)
+    sheet2Btn.BackgroundColor3 = Color3.fromRGB(35,35,35); sheet1Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
 end)
 
 farmBtn.MouseButton1Click:Connect(function()
     running = not running
     farmBtn.Text = running and "STOP FARM" or "START FARMING"
     farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
+end)
+
+purgeBtn.MouseButton1Click:Connect(function()
+    applyDeepClean()
+    purgeBtn.Text = "PURGED!"
+    task.wait(1)
+    purgeBtn.Text = "PURGE ASSETS (LAG FIX)"
 end)
 
 cpuBtn.MouseButton1Click:Connect(function()
@@ -234,5 +235,4 @@ cpuBtn.MouseButton1Click:Connect(function()
     fpsLabel.Text = "FPS: " .. (renderingEnabled and "Active" or "Reduced")
 end)
 
-purgeBtn.MouseButton1Click:Connect(applyDeepClean)
 game:BindToClose(function() sendWebhook(STATUS_WEBHOOK, 0, totalMoneyEarned, sessionRaces, true) end)
