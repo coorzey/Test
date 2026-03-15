@@ -1,6 +1,6 @@
 -- ==========================================  
--- V58.6 FINAL REBORN - FULL PATH RESTORED
--- UPDATE: 42 PATH POINTS + AGGRESSIVE PURGE
+-- V58.6 FINAL REBORN - SINCERED EDITION
+-- MERGED: 2-SHEET UI + NEWEST MECHANICS
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -11,6 +11,13 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
+
+-- [NEWEST MECHANICS: MEMORY & ANTI-AFK]
+task.spawn(function()
+    while task.wait(60) do collectgarbage("collect") end
+end)
+
+for _, v in pairs(getconnections(LP.Idled)) do v:Disable() end
 
 -- [GLOBALS]
 local running, isMinimized = false, false
@@ -23,7 +30,7 @@ local moneyBeforeRace = 0
 local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
 local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
 
--- [[ FULL PATH DATA: 1 - 42 ]]
+-- [[ DATA KOORDINAT ASLI: 1 - 42 ]]
 local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
 local startRot = -95.3   
 local path = {   
@@ -50,7 +57,7 @@ local path = {
     {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
 }
 
--- [[ FUNGSI UTAMA ]]
+-- [FUNGSI UTAMA]
 local function getPlayerMoney()   
     local leaderstats = LP:FindFirstChild("leaderstats")   
     if leaderstats then   
@@ -64,6 +71,7 @@ local function applyDeepClean()
     pcall(function()
         settings().Rendering.QualityLevel = 1
         Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
         for _, v in pairs(Workspace:GetDescendants()) do
             local name = v.Name:lower()
             if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") or name:find("vehicle") then
@@ -84,8 +92,8 @@ local function sendWebhook(url, gain, total, races, isOffline)
             ["color"] = isOffline and 16711680 or 65430,
             ["fields"] = {
                 {["name"] = "Player", ["value"] = "||" .. tostring(LP.Name) .. "||", ["inline"] = true},
-                {["name"] = "Race Profit", ["value"] = "$" .. tostring(gain), ["inline"] = true},
-                {["name"] = "Total Profit", ["value"] = "$" .. tostring(total), ["inline"] = true},
+                {["name"] = "Race Profit", ["value"] = "```$" .. tostring(gain) .. "```", ["inline"] = true},
+                {["name"] = "Total Profit", ["value"] = "```$" .. tostring(total) .. "```", ["inline"] = true},
                 {["name"] = "Races", ["value"] = tostring(races), ["inline"] = true},
             }
         }}}
@@ -133,7 +141,7 @@ local farmBtn = createBtn("START FARMING", Color3.fromRGB(0, 120, 255), containe
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", Color3.fromRGB(35,35,35), container1)
 local cpuBtn = createBtn("NEON DARK: OFF", Color3.fromRGB(35,35,35), container1)
 
--- [[ LOGIKA AUTO FARM ]]
+-- [[ LOGIKA INTI: SINKRON DENGAN MEKANIK BARU ]]
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -144,9 +152,13 @@ task.spawn(function()
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 
                 applyDeepClean()
+                -- FORCE STOP LOGIC (Sesuai Script Baru)
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                 car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
-                
+                task.wait(0.05)
+                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+
                 statusLbl.Text = "● WAITING RIVAL..."
                 local rivalFound = false
                 repeat 
@@ -154,7 +166,8 @@ task.spawn(function()
                     if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
                     for _, p in pairs(Players:GetPlayers()) do 
                         if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            if (p.Character.HumanoidRootPart.Position - startPos).Magnitude < 25 then rivalFound = true end 
+                            local rHum = p.Character:FindFirstChildOfClass("Humanoid")
+                            if (p.Character.HumanoidRootPart.Position - startPos).Magnitude < 25 and (rHum and rHum.SeatPart) then rivalFound = true end 
                         end
                     end
                 until not running or rivalFound
@@ -164,17 +177,20 @@ task.spawn(function()
                     for i = 18, 1, -1 do 
                         if not running then break end
                         statusLbl.Text = "● START IN: "..i.."s"
+                        if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
                         task.wait(1) 
                     end
                     
                     if running then
                         for i, d in ipairs(path) do
-                            if not running then break end
+                            if not running or not seat.Parent then break end
                             statusLbl.Text = "● RACING: " .. i .. "/42"
                             local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
+                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                             car:PivotTo(cf)
+                            task.wait(0.05)
                             seat.AssemblyLinearVelocity = cf.LookVector * 165
-                            task.wait(1.8)
+                            task.wait(1.8) -- Kecepatan Stabil
                         end
                         
                         task.wait(3)
@@ -194,9 +210,10 @@ task.spawn(function()
     end
 end)
 
--- [[ UI EVENTS ]]
+-- [[ EVENTS ]]
 toggleBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
+    content.Visible = not isMinimized -- UI content
     container1.Visible = not isMinimized and (currentSheet == 1)
     container2.Visible = not isMinimized and (currentSheet == 2)
     tabHolder.Visible = not isMinimized
@@ -206,12 +223,14 @@ end)
 
 sheet1Btn.MouseButton1Click:Connect(function()
     currentSheet = 1; container1.Visible = true; container2.Visible = false
-    sheet1Btn.BackgroundColor3 = Color3.fromRGB(35,35,35); sheet2Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    sheet1Btn.BackgroundColor3 = Color3.fromRGB(35,35,35); sheet1Btn.TextColor3 = Color3.new(1,1,1)
+    sheet2Btn.BackgroundColor3 = Color3.fromRGB(25,25,25); sheet2Btn.TextColor3 = Color3.new(0.6,0.6,0.6)
 end)
 
 sheet2Btn.MouseButton1Click:Connect(function()
     currentSheet = 2; container1.Visible = false; container2.Visible = true
-    sheet2Btn.BackgroundColor3 = Color3.fromRGB(35,35,35); sheet1Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    sheet2Btn.BackgroundColor3 = Color3.fromRGB(35,35,35); sheet2Btn.TextColor3 = Color3.new(1,1,1)
+    sheet1Btn.BackgroundColor3 = Color3.fromRGB(25,25,25); sheet1Btn.TextColor3 = Color3.new(0.6,0.6,0.6)
 end)
 
 farmBtn.MouseButton1Click:Connect(function()
