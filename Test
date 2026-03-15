@@ -1,7 +1,6 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: STABLE DUAL WEBHOOK + CLOUD OPTIMIZED
--- FIX: TAB SYSTEM (AUTO & DRAG)
+-- UPDATE: AUTO SPAWN VEHICLE + TAB SYSTEM
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -10,7 +9,7 @@ local Lighting = game:GetService("Lighting")
 local VirtualUser = game:GetService("VirtualUser")
 local PlayerGui = LP:WaitForChild("PlayerGui")   
 local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- [NEW] OPTIMIZATION GLOBALS
 local renderingEnabled = true
@@ -46,6 +45,28 @@ end)
 local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
+
+-- [[ FUNGSI AUTO SPAWN MOBIL ]]
+local function autoSpawnCar()
+    pcall(function()
+        -- Mencari Remote untuk Spawn (Menyesuaikan standar game balapan populer)
+        local spawnRemote = ReplicatedStorage:FindFirstChild("SpawnVehicle") or 
+                            ReplicatedStorage:FindFirstChild("SpawnCar") or
+                            (ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("SpawnVehicle"))
+        
+        if spawnRemote then
+            -- Memicu remote untuk memunculkan mobil pertama di daftar
+            spawnRemote:FireServer("Default") 
+        else
+            -- Jika remote tidak ditemukan, coba simulasi tekan tombol UI Spawn jika ada
+            for _, v in pairs(PlayerGui:GetDescendants()) do
+                if v:IsA("TextButton") and (v.Text:lower():find("spawn") or v.Name:lower():find("spawn")) then
+                    for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
+                end
+            end
+        end
+    end)
+end
 
 -- FUNGSI SUPER LOW GRAPHIC + PURGE
 local function applyDeepClean()
@@ -164,7 +185,7 @@ task.spawn(function() while true do for i = 0, 1, 0.01 do rgbLabel.TextColor3 = 
 
 local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.Font = Enum.Font.GothamBold; toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", toggleBtn)
 
--- TAB SYSTEM ADDED HERE
+-- TAB SYSTEM
 local tabContainer = Instance.new("Frame", frame); tabContainer.Size = UDim2.new(1, -20, 0, 25); tabContainer.Position = UDim2.new(0, 10, 0, 35); tabContainer.BackgroundTransparency = 1
 local tabLayout = Instance.new("UIListLayout", tabContainer); tabLayout.FillDirection = "Horizontal"; tabLayout.Padding = UDim.new(0, 5)
 
@@ -205,7 +226,6 @@ btnDrag.MouseButton1Click:Connect(function()
     btnDrag.BackgroundColor3 = clr_accent; btnDrag.TextColor3 = Color3.new(0,0,0)
     btnAuto.BackgroundColor3 = clr_btn_off; btnAuto.TextColor3 = Color3.new(1,1,1)
 end)
--- Set Default
 btnAuto.BackgroundColor3 = clr_accent; btnAuto.TextColor3 = Color3.new(0,0,0)
 
 -- ORIGINAL BUTTONS (In Auto Page)
@@ -225,7 +245,7 @@ local moneyLabel = createHudLbl("Profit: $0", clr_accent, 5)
 local raceLabel = createHudLbl("Races: 0", Color3.new(1,1,1), 23)
 local fpsLabel = createHudLbl("FPS: 0", Color3.fromRGB(0, 255, 255), 41)
 
--- WEBHOOK CORE
+-- WEBHOOK CORE (URLs shortened for clarity)
 local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
 local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
 
@@ -265,6 +285,18 @@ task.spawn(function()
         if running then
             local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
             local seat = hum and hum.SeatPart
+            
+            -- [MODIFIED] Auto Spawn jika belum ada kursi
+            if not seat then
+                status.Text = "● SPAWNING CAR..."
+                autoSpawnCar()
+                task.wait(2) -- Beri waktu mobil muncul
+            end
+            
+            -- Re-check seat setelah spawn
+            hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            seat = hum and hum.SeatPart
+
             if seat and seat:IsA("VehicleSeat") then
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 
@@ -340,7 +372,9 @@ task.spawn(function()
                         task.wait(2)
                     end
                 end
-            else status.Text = "● SIT IN CAR!" end
+            else 
+                status.Text = "● CHECKING CAR..." 
+            end
         end
     end
 end)
@@ -358,6 +392,11 @@ farmBtn.MouseButton1Click:Connect(function()
     running = not running
     farmBtn.Text = running and "STOP FARM" or "START FARMING"
     farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
+    
+    -- [NEW] Langsung spawn mobil saat tombol ditekan
+    if running then
+        autoSpawnCar()
+    end
 end)
 
 cpuBtn.MouseButton1Click:Connect(function()
