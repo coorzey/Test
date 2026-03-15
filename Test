@@ -1,6 +1,6 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: MIDNIGHT CHASERS AUTO SPAWN FIX
+-- UPDATE: MIDNIGHT CHASERS AUTO SPAWN (2018 FIX)
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -11,21 +11,21 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- [NEW] OPTIMIZATION GLOBALS
+-- OPTIMIZATION GLOBALS
 local renderingEnabled = true
 local function toggle3DRender(mode)
     renderingEnabled = mode
     RunService:Set3dRenderingEnabled(mode)
 end
 
--- [NEW] AUTO MEMORY CLEANER
+-- AUTO MEMORY CLEANER
 task.spawn(function()
     while task.wait(60) do
         collectgarbage("collect")
     end
 end)
 
--- [REPLACED] SUPER ANTI-AFK
+-- SUPER ANTI-AFK
 for _, v in pairs(getconnections(LP.Idled)) do
     v:Disable()
 end
@@ -46,37 +46,40 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS ]]
+-- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - VERSION 2018 ]]
 local function autoSpawnCar()
     pcall(function()
-        -- 1. Mencari Remote untuk memunculkan mobil (Bypass UI)
+        -- 1. Direct Remote Invocation (Cara paling ampuh)
         local spawnRemote = ReplicatedStorage:FindFirstChild("SpawnVehicle", true) or 
                             ReplicatedStorage:FindFirstChild("RequestVehicleSpawn", true)
         
         if spawnRemote and spawnRemote:IsA("RemoteEvent") then
-            -- Mencoba spawn mobil pertama (biasanya index 1 atau nama mobil)
-            spawnRemote:FireServer(1) 
-            spawnRemote:FireServer("Lily Power TR450") 
+            -- Menggunakan nama lengkap sesuai koreksi Anda
+            spawnRemote:FireServer("2018 Lily Power TR450") 
+            task.wait(0.5)
         end
 
-        -- 2. Mencari Tombol Spawn di Sidebar (Fallback jika remote gagal)
+        -- 2. Fallback: Simulasi Klik UI menggunakan .Activated
         local spawnBtn = nil
         for _, v in pairs(PlayerGui:GetDescendants()) do
-            if (v:IsA("TextLabel") and v.Text == "Spawn") or v.Name == "Spawn" then
+            if (v:IsA("TextLabel") and v.Text == "Spawn") or (v:IsA("TextButton") and v.Text == "Spawn") or v.Name == "Spawn" then
                 spawnBtn = (v:IsA("TextLabel") and v.Parent) or v
-                break
+                if spawnBtn:IsA("GuiButton") then break end
             end
         end
 
         if spawnBtn then
-            -- Klik tombol sidebar 'Spawn'
+            -- Klik tombol sidebar
+            for _, conn in pairs(getconnections(spawnBtn.Activated)) do conn:Fire() end
             for _, conn in pairs(getconnections(spawnBtn.MouseButton1Click)) do conn:Fire() end
-            task.wait(0.8)
+            task.wait(1)
 
-            -- Klik gambar mobil pertama di menu yang muncul
+            -- Klik gambar mobil di menu scrolling
             for _, v in pairs(PlayerGui:GetDescendants()) do
                 if v:IsA("ImageButton") and v.Visible and v.AbsoluteSize.X > 50 then
+                    -- Mencari tombol yang berada di dalam list kendaraan
                     if v.Parent.Name:lower():find("vehicle") or v.Parent:IsA("ScrollingFrame") then
+                        for _, conn in pairs(getconnections(v.Activated)) do conn:Fire() end
                         for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
                         break
                     end
@@ -181,7 +184,7 @@ local path = {
     {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
 }
 
--- [[ UI SYSTEM ]]
+-- UI SYSTEM
 if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
 local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.ResetOnSpawn = false
 
@@ -244,7 +247,7 @@ btnDrag.MouseButton1Click:Connect(function()
 end)
 btnAuto.BackgroundColor3 = clr_accent; btnAuto.TextColor3 = Color3.new(0,0,0)
 
--- ORIGINAL BUTTONS
+-- BUTTONS
 local farmBtn = createBtn("START FARMING", clr_btn_off, autoFarmPage)
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, autoFarmPage)
 local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, autoFarmPage)
@@ -302,7 +305,7 @@ task.spawn(function()
             local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
             local seat = hum and hum.SeatPart
             
-            -- [AUTO SPAWN LOGIC]
+            -- AUTO SPAWN LOGIC
             if not seat then
                 status.Text = "● SPAWNING VEHICLE..."
                 autoSpawnCar()
