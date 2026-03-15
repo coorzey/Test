@@ -1,6 +1,6 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: AUTO SPAWN VEHICLE + TAB SYSTEM
+-- UPDATE: AUTO SPAWN VEHICLE (SPECIFIC UI)
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -46,22 +46,35 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- [[ FUNGSI AUTO SPAWN MOBIL ]]
+-- [[ FUNGSI AUTO SPAWN MOBIL KHUSUS SESUAI GAMBAR ]]
 local function autoSpawnCar()
     pcall(function()
-        -- Mencari Remote untuk Spawn (Menyesuaikan standar game balapan populer)
-        local spawnRemote = ReplicatedStorage:FindFirstChild("SpawnVehicle") or 
-                            ReplicatedStorage:FindFirstChild("SpawnCar") or
-                            (ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("SpawnVehicle"))
-        
-        if spawnRemote then
-            -- Memicu remote untuk memunculkan mobil pertama di daftar
-            spawnRemote:FireServer("Default") 
-        else
-            -- Jika remote tidak ditemukan, coba simulasi tekan tombol UI Spawn jika ada
+        -- 1. Cari dan Tekan Tombol Spawn (Ikon Mobil di Kiri)
+        local spawnBtn = nil
+        for _, v in pairs(PlayerGui:GetDescendants()) do
+            if v:IsA("ImageButton") or v:IsA("TextButton") then
+                -- Mencari tombol berdasarkan nama atau teks 'Spawn' sesuai screenshot
+                if v.Name == "Spawn" or v.Name:find("Spawn") or (v:IsA("TextLabel") and v.Text == "Spawn") then
+                    spawnBtn = (v:IsA("TextLabel") and v.Parent) or v
+                    break
+                end
+            end
+        end
+
+        if spawnBtn then
+            -- Trigger klik tombol Spawn di samping
+            for _, conn in pairs(getconnections(spawnBtn.MouseButton1Click)) do conn:Fire() end
+            task.wait(0.8) -- Jeda agar menu terbuka
+
+            -- 2. Cari Tombol Mobil di dalam Menu yang muncul
             for _, v in pairs(PlayerGui:GetDescendants()) do
-                if v:IsA("TextButton") and (v.Text:lower():find("spawn") or v.Name:lower():find("spawn")) then
-                    for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
+                -- Mencari ImageButton yang berukuran cukup besar (gambar mobil) dan terlihat
+                if v:IsA("ImageButton") and v.Visible and v.AbsoluteSize.X > 50 then
+                    -- Klik gambar mobil pertama yang ditemukan untuk memunculkan (Lily Power TR450 / Aux PTX)
+                    if v.Parent:IsA("Frame") or v.Parent:IsA("ScrollingFrame") then
+                        for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
+                        break
+                    end
                 end
             end
         end
@@ -228,7 +241,7 @@ btnDrag.MouseButton1Click:Connect(function()
 end)
 btnAuto.BackgroundColor3 = clr_accent; btnAuto.TextColor3 = Color3.new(0,0,0)
 
--- ORIGINAL BUTTONS (In Auto Page)
+-- ORIGINAL BUTTONS
 local farmBtn = createBtn("START FARMING", clr_btn_off, autoFarmPage)
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, autoFarmPage)
 local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, autoFarmPage)
@@ -245,7 +258,7 @@ local moneyLabel = createHudLbl("Profit: $0", clr_accent, 5)
 local raceLabel = createHudLbl("Races: 0", Color3.new(1,1,1), 23)
 local fpsLabel = createHudLbl("FPS: 0", Color3.fromRGB(0, 255, 255), 41)
 
--- WEBHOOK CORE (URLs shortened for clarity)
+-- WEBHOOK CORE
 local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
 local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
 
@@ -286,14 +299,13 @@ task.spawn(function()
             local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
             local seat = hum and hum.SeatPart
             
-            -- [MODIFIED] Auto Spawn jika belum ada kursi
+            -- [NEW] AUTO SPAWN LOGIC BEFORE RACE
             if not seat then
-                status.Text = "● SPAWNING CAR..."
+                status.Text = "● SPAWNING VEHICLE..."
                 autoSpawnCar()
-                task.wait(2) -- Beri waktu mobil muncul
+                task.wait(2)
             end
             
-            -- Re-check seat setelah spawn
             hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
             seat = hum and hum.SeatPart
 
@@ -372,9 +384,7 @@ task.spawn(function()
                         task.wait(2)
                     end
                 end
-            else 
-                status.Text = "● CHECKING CAR..." 
-            end
+            else status.Text = "● WAITING FOR CAR..." end
         end
     end
 end)
@@ -392,11 +402,7 @@ farmBtn.MouseButton1Click:Connect(function()
     running = not running
     farmBtn.Text = running and "STOP FARM" or "START FARMING"
     farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
-    
-    -- [NEW] Langsung spawn mobil saat tombol ditekan
-    if running then
-        autoSpawnCar()
-    end
+    if running then autoSpawnCar() end
 end)
 
 cpuBtn.MouseButton1Click:Connect(function()
