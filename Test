@@ -1,6 +1,6 @@
 -- ==========================================  
--- V58.6 FINAL REBORN - NPC PURGE FIXED
--- UPDATE: AGGRESSIVE NPC & TRAFFIC CLEANER
+-- V58.6 FINAL REBORN - FULL PATH RESTORED
+-- UPDATE: 42 PATH POINTS + AGGRESSIVE PURGE
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -19,11 +19,11 @@ local currentSheet = 1
 local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 
--- [WEBHOOK]
+-- [WEBHOOK CONFIG]
 local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
 local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
 
--- [PATH DATA]
+-- [[ FULL PATH DATA: 1 - 42 ]]
 local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
 local startRot = -95.3   
 local path = {   
@@ -35,38 +35,22 @@ local path = {
     {pos = {-1247.06, 16.11, 121.99}, rot = 101.03}, {pos = {-1910.41, -11.95, 276.76}, rot = 103.87},
     {pos = {-2580.79, -8.75, 417.36}, rot = 101.97}, {pos = {-3175.10, 18.31, 542.23}, rot = 101.76},
     {pos = {-3916.48, 23.47, 701.48}, rot = 101.44}, {pos = {-4630.57, 31.07, 839.62}, rot = 102.08},
-    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
+    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, 
+    {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, 
+    {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, 
+    {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, 
+    {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, 
+    {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, 
+    {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, 
+    {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, 
+    {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, 
+    {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, 
+    {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, 
+    {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, 
+    {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
 }
 
--- [[ FUNGSI PURGE ASLI (RE-FIXED) ]]
-local function applyDeepClean()
-    pcall(function()
-        settings().Rendering.QualityLevel = 1
-        Lighting.GlobalShadows = false
-        Lighting.FogEnd = 9e9
-        
-        for _, v in pairs(Workspace:GetDescendants()) do
-            local name = v.Name:lower()
-            -- MENGHAPUS SEMUA NPC, TRAFFIC, DAN MOBIL LAIN
-            if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") or name:find("vehicle") then
-                if not v:IsDescendantOf(LP.Character) and not v:IsDescendantOf(Workspace.CurrentCamera) then
-                    v:Destroy()
-                end
-            -- MENGHAPUS OBJEK LINGKUNGAN BERAT
-            elseif v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
-                v.Material = Enum.Material.SmoothPlastic
-                v.CastShadow = false
-                if name:find("tree") or name:find("grass") or name:find("bush") or name:find("leaf") then
-                    v:Destroy()
-                end
-            -- MENGHAPUS EFEK VISUAL
-            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
-                v:Destroy()
-            end
-        end
-    end)
-end
-
+-- [[ FUNGSI UTAMA ]]
 local function getPlayerMoney()   
     local leaderstats = LP:FindFirstChild("leaderstats")   
     if leaderstats then   
@@ -75,6 +59,23 @@ local function getPlayerMoney()
     end   
     return 0   
 end   
+
+local function applyDeepClean()
+    pcall(function()
+        settings().Rendering.QualityLevel = 1
+        Lighting.GlobalShadows = false
+        for _, v in pairs(Workspace:GetDescendants()) do
+            local name = v.Name:lower()
+            if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") or name:find("vehicle") then
+                if not v:IsDescendantOf(LP.Character) then v:Destroy() end
+            elseif v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
+                v.Material = Enum.Material.SmoothPlastic
+                v.CastShadow = false
+                if name:find("tree") or name:find("grass") or name:find("leaf") then v:Destroy() end
+            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") then v:Destroy() end
+        end
+    end)
+end
 
 local function sendWebhook(url, gain, total, races, isOffline)
     pcall(function()
@@ -98,11 +99,10 @@ local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.R
 
 local frame = Instance.new("Frame", sg)   
 frame.Size = UDim2.new(0, 260, 0, 230); frame.Position = UDim2.new(0.5, -130, 0.4, 0); frame.BackgroundColor3 = Color3.fromRGB(18,18,18); frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
-Instance.new("UICorner", frame)
-Instance.new("UIStroke", frame).Color = Color3.fromRGB(45,45,45)
+Instance.new("UICorner", frame); Instance.new("UIStroke", frame).Color = Color3.fromRGB(45,45,45)
 
 local header = Instance.new("Frame", frame); header.Size = UDim2.new(1, 0, 0, 35); header.BackgroundTransparency = 1
-local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(1, -40, 1, 0); rgbLabel.Position = UDim2.new(0, 12, 0, 0); rgbLabel.Text = "CORRZEY HUB V58.6"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = "GothamBold"; rgbLabel.TextSize = 11; rgbLabel.TextColor3 = Color3.new(1,1,1); rgbLabel.TextXAlignment = "Left"
+local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(1, -40, 1, 0); rgbLabel.Position = UDim2.new(0, 12, 0, 0); rgbLabel.Text = "CORRZEY HUB V58.6"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = "GothamBold"; rgbLabel.TextSize = 11; rgbLabel.TextXAlignment = "Left"
 task.spawn(function() while true do for i = 0, 1, 0.01 do rgbLabel.TextColor3 = Color3.fromHSV(i, 1, 1) task.wait(0.03) end end end)
 
 local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.Font = "GothamBold"; toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", toggleBtn)
@@ -125,7 +125,6 @@ local layout1 = Instance.new("UIListLayout", container1); layout1.Padding = UDim
 
 -- SHEET 1 CONTENT
 local statusLbl = Instance.new("TextLabel", container1); statusLbl.Size = UDim2.new(1, 0, 0, 20); statusLbl.Text = "● STATUS: READY"; statusLbl.TextColor3 = Color3.fromRGB(0, 255, 150); statusLbl.BackgroundTransparency = 1; statusLbl.Font = "GothamBold"; statusLbl.TextSize = 10
-
 local function createBtn(txt, color, parent)
     local b = Instance.new("TextButton", parent); b.Size = UDim2.new(1, 0, 0, 32); b.BackgroundColor3 = color; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = "GothamBold"; b.TextSize = 10; Instance.new("UICorner", b)
     return b
@@ -144,7 +143,7 @@ task.spawn(function()
             if seat and seat:IsA("VehicleSeat") then
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 
-                applyDeepClean() -- AUTO PURGE SAAT RACE
+                applyDeepClean()
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
                 
@@ -171,14 +170,14 @@ task.spawn(function()
                     if running then
                         for i, d in ipairs(path) do
                             if not running then break end
-                            statusLbl.Text = "● RACING: " .. i .. "/" .. #path
+                            statusLbl.Text = "● RACING: " .. i .. "/42"
                             local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
                             car:PivotTo(cf)
                             seat.AssemblyLinearVelocity = cf.LookVector * 165
                             task.wait(1.8)
                         end
                         
-                        task.wait(2)
+                        task.wait(3)
                         local currentMoney = getPlayerMoney()
                         local gain = currentMoney - moneyBeforeRace
                         if gain > 0 then
@@ -195,7 +194,7 @@ task.spawn(function()
     end
 end)
 
--- [[ EVENTS ]]
+-- [[ UI EVENTS ]]
 toggleBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     container1.Visible = not isMinimized and (currentSheet == 1)
@@ -221,12 +220,7 @@ farmBtn.MouseButton1Click:Connect(function()
     farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
 end)
 
-purgeBtn.MouseButton1Click:Connect(function()
-    applyDeepClean()
-    purgeBtn.Text = "PURGED!"
-    task.wait(1)
-    purgeBtn.Text = "PURGE ASSETS (LAG FIX)"
-end)
+purgeBtn.MouseButton1Click:Connect(applyDeepClean)
 
 cpuBtn.MouseButton1Click:Connect(function()
     renderingEnabled = not renderingEnabled
