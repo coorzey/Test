@@ -1,6 +1,6 @@
 -- ==========================================  
--- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: RESTORED LOGIC + 2 SHEET UI
+-- V58.6 FINAL REBORN - RESTORED & FIXED
+-- LOGIKA ASLI 100% SAMA DENGAN VERSI PERTAMA
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -12,18 +12,20 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
 
--- GLOBALS
+-- [LOGIKA ASLI: ANTI-AFK & MEMORY]
+for _, v in pairs(getconnections(LP.Idled)) do v:Disable() end
+task.spawn(function()
+    while task.wait(60) do collectgarbage("collect") end
+end)
+
+-- [LOGIKA ASLI: GLOBALS]
 local running, isMinimized = false, false
-local currentSheet = 1
 local renderingEnabled = true
+local currentSheet = 1
 local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 
--- WEBHOOK CONFIG
-local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
-local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
-
--- PATHING DATA
+-- [LOGIKA ASLI: PATH DATA 1-41]
 local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
 local startRot = -95.3   
 local path = {   
@@ -35,25 +37,22 @@ local path = {
     {pos = {-1247.06, 16.11, 121.99}, rot = 101.03}, {pos = {-1910.41, -11.95, 276.76}, rot = 103.87},
     {pos = {-2580.79, -8.75, 417.36}, rot = 101.97}, {pos = {-3175.10, 18.31, 542.23}, rot = 101.76},
     {pos = {-3916.48, 23.47, 701.48}, rot = 101.44}, {pos = {-4630.57, 31.07, 839.62}, rot = 102.08},
-    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
+    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, 
+    {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, 
+    {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, 
+    {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, 
+    {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, 
+    {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, 
+    {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, 
+    {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, 
+    {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, 
+    {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, 
+    {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, 
+    {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, 
+    {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
 }
 
--- FUNCTIONS: UTILS
-local function applyDeepClean()
-    pcall(function()
-        settings().Rendering.QualityLevel = 1
-        Lighting.GlobalShadows = false
-        for _, v in pairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
-                v.Material = Enum.Material.SmoothPlastic
-                v.CastShadow = false
-            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") then
-                v:Destroy()
-            end
-        end
-    end)
-end
-
+-- [LOGIKA ASLI: FUNGSI-FUNGSI PENTING]
 local function getPlayerMoney()   
     local leaderstats = LP:FindFirstChild("leaderstats")   
     if leaderstats then   
@@ -63,45 +62,69 @@ local function getPlayerMoney()
     return 0   
 end   
 
-local function sendWebhook(url, gain, total, races, isOffline)
+local function applyDeepClean()
     pcall(function()
-        local data = {["embeds"] = {{["title"] = isOffline and "⚠️ STUCK" or "🚀 REPORT", ["fields"] = {
-            {["name"] = "Profit", ["value"] = "$" .. gain, ["inline"] = true},
-            {["name"] = "Total", ["value"] = "$" .. total, ["inline"] = true}
-        }}}}
-        if httpRequest then httpRequest({Url = url, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)}) end
+        settings().Rendering.QualityLevel = 1
+        Lighting.GlobalShadows = false
+        for _, v in pairs(Workspace:GetDescendants()) do
+            local name = v.Name:lower()
+            if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") then
+                if not v:IsDescendantOf(LP.Character) then v:Destroy() end
+            elseif v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+                v.CastShadow = false
+                if name:find("tree") or name:find("grass") or name:find("bush") then v:Destroy() end
+            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") then v:Destroy() end
+        end
     end)
 end
 
--- [[ UI SYSTEM ]]
+local function closePrizePopup()
+    pcall(function()
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "DeltaAutoFarm" then
+                for _, btn in pairs(gui:GetDescendants()) do
+                    if btn:IsA("ImageButton") or btn:IsA("TextButton") then
+                        local n = btn.Name:lower()
+                        if n == "x" or n:find("close") or n:find("exit") then
+                            pcall(function()
+                                for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- [[ UI SYSTEM: 2 SHEETS ]]
 if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
 local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.ResetOnSpawn = false
 
-local clr_bg = Color3.fromRGB(18, 18, 18)
-local clr_btn_off = Color3.fromRGB(35, 35, 35)
-
 local frame = Instance.new("Frame", sg)   
-frame.Size = UDim2.new(0, 260, 0, 220); frame.Position = UDim2.new(0.5, -130, 0.4, 0); frame.BackgroundColor3 = clr_bg; frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
+frame.Size = UDim2.new(0, 260, 0, 230); frame.Position = UDim2.new(0.5, -130, 0.4, 0); frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18); frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
 Instance.new("UICorner", frame)
-Instance.new("UIStroke", frame).Color = Color3.fromRGB(40,40,40)
+Instance.new("UIStroke", frame).Color = Color3.fromRGB(45, 45, 45)
 
 local header = Instance.new("Frame", frame); header.Size = UDim2.new(1, 0, 0, 35); header.BackgroundTransparency = 1
-local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(1, -40, 1, 0); rgbLabel.Position = UDim2.new(0, 10, 0, 0); rgbLabel.Text = "CORRZEY HUB V58.6"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = "GothamBold"; rgbLabel.TextSize = 12; rgbLabel.TextXAlignment = "Left"
+local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(1, -40, 1, 0); rgbLabel.Position = UDim2.new(0, 12, 0, 0); rgbLabel.Text = "CORRZEY HUB V58.6"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = "GothamBold"; rgbLabel.TextSize = 12; rgbLabel.TextXAlignment = "Left"
 task.spawn(function() while true do for i = 0, 1, 0.01 do rgbLabel.TextColor3 = Color3.fromHSV(i, 1, 1) task.wait(0.03) end end end)
 
--- TAB SYSTEM
+-- TAB NAV
 local tabHolder = Instance.new("Frame", frame); tabHolder.Size = UDim2.new(1, -20, 0, 30); tabHolder.Position = UDim2.new(0, 10, 0, 40); tabHolder.BackgroundTransparency = 1
 local tabLayout = Instance.new("UIListLayout", tabHolder); tabLayout.FillDirection = "Horizontal"; tabLayout.Padding = UDim.new(0, 5)
 
-local sheet1Btn = Instance.new("TextButton", tabHolder); sheet1Btn.Size = UDim2.new(0.5, -2, 1, 0); sheet1Btn.Text = "AUTO FARM"; sheet1Btn.BackgroundColor3 = clr_btn_off; sheet1Btn.TextColor3 = Color3.new(1,1,1); sheet1Btn.Font = "GothamBold"; sheet1Btn.TextSize = 10; Instance.new("UICorner", sheet1Btn)
-local sheet2Btn = Instance.new("TextButton", tabHolder); sheet2Btn.Size = UDim2.new(0.5, -2, 1, 0); sheet2Btn.Text = "DRAG FARM"; sheet2Btn.BackgroundColor3 = Color3.fromRGB(25,25,25); sheet2Btn.TextColor3 = Color3.new(0.6,0.6,0.6); sheet2Btn.Font = "GothamBold"; sheet2Btn.TextSize = 10; Instance.new("UICorner", sheet2Btn)
+local sheet1Btn = Instance.new("TextButton", tabHolder); sheet1Btn.Size = UDim2.new(0.5, -2, 1, 0); sheet1Btn.Text = "AUTO FARM"; sheet1Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); sheet1Btn.TextColor3 = Color3.new(1,1,1); sheet1Btn.Font = "GothamBold"; sheet1Btn.TextSize = 10; Instance.new("UICorner", sheet1Btn)
+local sheet2Btn = Instance.new("TextButton", tabHolder); sheet2Btn.Size = UDim2.new(0.5, -2, 1, 0); sheet2Btn.Text = "DRAG FARM"; sheet2Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25); sheet2Btn.TextColor3 = Color3.new(0.6,0.6,0.6); sheet2Btn.Font = "GothamBold"; sheet2Btn.TextSize = 10; Instance.new("UICorner", sheet2Btn)
 
-local container1 = Instance.new("Frame", frame); container1.Size = UDim2.new(1, -20, 0, 140); container1.Position = UDim2.new(0, 10, 0, 75); container1.BackgroundTransparency = 1; container1.Visible = true
-local container2 = Instance.new("Frame", frame); container2.Size = UDim2.new(1, -20, 0, 140); container2.Position = UDim2.new(0, 10, 0, 75); container2.BackgroundTransparency = 1; container2.Visible = false
-local layout1 = Instance.new("UIListLayout", container1); layout1.Padding = UDim.new(0, 5)
+local container1 = Instance.new("Frame", frame); container1.Size = UDim2.new(1, -20, 0, 150); container1.Position = UDim2.new(0, 10, 0, 75); container1.BackgroundTransparency = 1; container1.Visible = true
+local container2 = Instance.new("Frame", frame); container2.Size = UDim2.new(1, -20, 0, 150); container2.Position = UDim2.new(0, 10, 0, 75); container2.BackgroundTransparency = 1; container2.Visible = false
+local layout1 = Instance.new("UIListLayout", container1); layout1.Padding = UDim.new(0, 6)
 
--- SHEET 1 CONTENT
-local status = Instance.new("TextLabel", container1); status.Size = UDim2.new(1, 0, 0, 20); status.Text = "● STATUS: READY"; status.TextColor3 = Color3.fromRGB(0, 255, 150); status.BackgroundTransparency = 1; status.Font = "GothamBold"; status.TextSize = 10
+-- SHEET 1 BUTTONS
+local statusLbl = Instance.new("TextLabel", container1); statusLbl.Size = UDim2.new(1, 0, 0, 20); statusLbl.Text = "● STATUS: READY"; statusLbl.TextColor3 = Color3.fromRGB(0, 255, 150); statusLbl.BackgroundTransparency = 1; statusLbl.Font = "GothamBold"; statusLbl.TextSize = 10
 
 local function createBtn(txt, color, parent)
     local b = Instance.new("TextButton", parent); b.Size = UDim2.new(1, 0, 0, 32); b.BackgroundColor3 = color; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = "GothamBold"; b.TextSize = 10; Instance.new("UICorner", b)
@@ -109,13 +132,13 @@ local function createBtn(txt, color, parent)
 end
 
 local farmBtn = createBtn("START FARMING", Color3.fromRGB(0, 120, 255), container1)
-local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, container1)
-local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, container1)
+local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", Color3.fromRGB(35, 35, 35), container1)
+local cpuBtn = createBtn("NEON DARK: OFF", Color3.fromRGB(35, 35, 35), container1)
 
--- SHEET 2 CONTENT
-local dragLabel = Instance.new("TextLabel", container2); dragLabel.Size = UDim2.new(1, 0, 1, 0); dragLabel.Text = "DRAG FARM SECTION\n(EMPTY FOR NOW)"; dragLabel.TextColor3 = Color3.new(0.4, 0.4, 0.4); dragLabel.BackgroundTransparency = 1; dragLabel.Font = "GothamBold"; dragLabel.TextSize = 11
+-- SHEET 2 PLACEHOLDER
+local dragLbl = Instance.new("TextLabel", container2); dragLbl.Size = UDim2.new(1, 0, 1, 0); dragLbl.Text = "DRAG FARM SOON..."; dragLbl.TextColor3 = Color3.fromRGB(100,100,100); dragLbl.BackgroundTransparency = 1; dragLbl.Font = "GothamBold"; dragLbl.TextSize = 12
 
--- [[ CORE LOGIC: AUTO FARM ]]
+-- [[ LOGIKA ASLI: AUTO FARM LOOP ]]
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -125,13 +148,18 @@ task.spawn(function()
             if seat and seat:IsA("VehicleSeat") then
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 
+                applyDeepClean()
+                closePrizePopup()
+                
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                 car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
                 
-                status.Text = "● WAITING RIVAL..."
+                statusLbl.Text = "● WAITING RIVAL..."
                 local rivalFound = false
                 repeat 
                     task.wait(1)
+                    if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
                     for _, p in pairs(Players:GetPlayers()) do 
                         if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                             if (p.Character.HumanoidRootPart.Position - startPos).Magnitude < 25 then rivalFound = true end 
@@ -142,47 +170,60 @@ task.spawn(function()
                 if running and rivalFound then
                     moneyBeforeRace = getPlayerMoney()
                     for i = 18, 1, -1 do 
-                        status.Text = "● START IN: "..i.."s"
+                        if not running then break end
+                        statusLbl.Text = "● START IN: "..i.."s"
+                        if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
                         task.wait(1) 
                     end
                     
-                    for i, d in ipairs(path) do
-                        if not running then break end
-                        status.Text = "● RACING: " .. i .. "/" .. #path
-                        local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
-                        car:PivotTo(cf)
-                        seat.AssemblyLinearVelocity = cf.LookVector * 165
-                        task.wait(1.7) 
+                    if running then
+                        for i, d in ipairs(path) do
+                            if not running or not seat.Parent then break end
+                            statusLbl.Text = "● RACING: " .. i .. "/42"
+                            local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
+                            car:PivotTo(cf)
+                            seat.AssemblyLinearVelocity = cf.LookVector * 165
+                            task.wait(1.7) -- Delay antar titik sesuai aslinya
+                        end
+                        
+                        task.wait(3)
+                        local currentMoney = getPlayerMoney()
+                        if currentMoney > moneyBeforeRace then 
+                            totalMoneyEarned = totalMoneyEarned + (currentMoney - moneyBeforeRace)
+                            sessionRaces = sessionRaces + 1
+                        end
+                        task.wait(2)
                     end
-                    
-                    local gain = getPlayerMoney() - moneyBeforeRace
-                    if gain > 0 then
-                        totalMoneyEarned = totalMoneyEarned + gain
-                        sessionRaces = sessionRaces + 1
-                        sendWebhook(MAIN_WEBHOOK, gain, totalMoneyEarned, sessionRaces, false)
-                    end
-                    task.wait(2)
                 end
-            else status.Text = "● PLEASE SIT IN CAR!" end
+            else statusLbl.Text = "● SIT IN CAR!" end
         end
     end
 end)
 
--- [[ UI EVENTS ]]
+-- [[ UI TAB EVENTS ]]
 sheet1Btn.MouseButton1Click:Connect(function()
     currentSheet = 1; container1.Visible = true; container2.Visible = false
-    sheet1Btn.BackgroundColor3 = clr_btn_off; sheet2Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    sheet1Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); sheet1Btn.TextColor3 = Color3.new(1,1,1)
+    sheet2Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25); sheet2Btn.TextColor3 = Color3.new(0.6,0.6,0.6)
 end)
 
 sheet2Btn.MouseButton1Click:Connect(function()
     currentSheet = 2; container1.Visible = false; container2.Visible = true
-    sheet2Btn.BackgroundColor3 = clr_btn_off; sheet1Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    sheet2Btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); sheet2Btn.TextColor3 = Color3.new(1,1,1)
+    sheet1Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25); sheet1Btn.TextColor3 = Color3.new(0.6,0.6,0.6)
 end)
 
 farmBtn.MouseButton1Click:Connect(function()
     running = not running
-    farmBtn.Text = running and "STOP FARM" or "START FARMING"
+    farmBtn.Text = running and "STOP FARMING" or "START FARMING"
     farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
+end)
+
+purgeBtn.MouseButton1Click:Connect(function()
+    applyDeepClean()
+    purgeBtn.Text = "PURGED!"
+    task.wait(1)
+    purgeBtn.Text = "PURGE ASSETS (LAG FIX)"
 end)
 
 cpuBtn.MouseButton1Click:Connect(function()
@@ -190,5 +231,3 @@ cpuBtn.MouseButton1Click:Connect(function()
     RunService:Set3dRenderingEnabled(renderingEnabled)
     cpuBtn.Text = renderingEnabled and "NEON DARK: OFF" or "NEON DARK: ON"
 end)
-
-purgeBtn.MouseButton1Click:Connect(applyDeepClean)
