@@ -1,6 +1,6 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: AUTO SPAWN VEHICLE (SPECIFIC UI)
+-- UPDATE: MIDNIGHT CHASERS AUTO SPAWN FIX
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -46,32 +46,37 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- [[ FUNGSI AUTO SPAWN MOBIL KHUSUS SESUAI GAMBAR ]]
+-- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS ]]
 local function autoSpawnCar()
     pcall(function()
-        -- 1. Cari dan Tekan Tombol Spawn (Ikon Mobil di Kiri)
+        -- 1. Mencari Remote untuk memunculkan mobil (Bypass UI)
+        local spawnRemote = ReplicatedStorage:FindFirstChild("SpawnVehicle", true) or 
+                            ReplicatedStorage:FindFirstChild("RequestVehicleSpawn", true)
+        
+        if spawnRemote and spawnRemote:IsA("RemoteEvent") then
+            -- Mencoba spawn mobil pertama (biasanya index 1 atau nama mobil)
+            spawnRemote:FireServer(1) 
+            spawnRemote:FireServer("Lily Power TR450") 
+        end
+
+        -- 2. Mencari Tombol Spawn di Sidebar (Fallback jika remote gagal)
         local spawnBtn = nil
         for _, v in pairs(PlayerGui:GetDescendants()) do
-            if v:IsA("ImageButton") or v:IsA("TextButton") then
-                -- Mencari tombol berdasarkan nama atau teks 'Spawn' sesuai screenshot
-                if v.Name == "Spawn" or v.Name:find("Spawn") or (v:IsA("TextLabel") and v.Text == "Spawn") then
-                    spawnBtn = (v:IsA("TextLabel") and v.Parent) or v
-                    break
-                end
+            if (v:IsA("TextLabel") and v.Text == "Spawn") or v.Name == "Spawn" then
+                spawnBtn = (v:IsA("TextLabel") and v.Parent) or v
+                break
             end
         end
 
         if spawnBtn then
-            -- Trigger klik tombol Spawn di samping
+            -- Klik tombol sidebar 'Spawn'
             for _, conn in pairs(getconnections(spawnBtn.MouseButton1Click)) do conn:Fire() end
-            task.wait(0.8) -- Jeda agar menu terbuka
+            task.wait(0.8)
 
-            -- 2. Cari Tombol Mobil di dalam Menu yang muncul
+            -- Klik gambar mobil pertama di menu yang muncul
             for _, v in pairs(PlayerGui:GetDescendants()) do
-                -- Mencari ImageButton yang berukuran cukup besar (gambar mobil) dan terlihat
                 if v:IsA("ImageButton") and v.Visible and v.AbsoluteSize.X > 50 then
-                    -- Klik gambar mobil pertama yang ditemukan untuk memunculkan (Lily Power TR450 / Aux PTX)
-                    if v.Parent:IsA("Frame") or v.Parent:IsA("ScrollingFrame") then
+                    if v.Parent.Name:lower():find("vehicle") or v.Parent:IsA("ScrollingFrame") then
                         for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
                         break
                     end
@@ -227,15 +232,13 @@ end
 
 -- TAB LOGIC
 btnAuto.MouseButton1Click:Connect(function()
-    autoFarmPage.Visible = true
-    dragFarmPage.Visible = false
+    autoFarmPage.Visible = true; dragFarmPage.Visible = false
     btnAuto.BackgroundColor3 = clr_accent; btnAuto.TextColor3 = Color3.new(0,0,0)
     btnDrag.BackgroundColor3 = clr_btn_off; btnDrag.TextColor3 = Color3.new(1,1,1)
 end)
 
 btnDrag.MouseButton1Click:Connect(function()
-    autoFarmPage.Visible = false
-    dragFarmPage.Visible = true
+    autoFarmPage.Visible = false; dragFarmPage.Visible = true
     btnDrag.BackgroundColor3 = clr_accent; btnDrag.TextColor3 = Color3.new(0,0,0)
     btnAuto.BackgroundColor3 = clr_btn_off; btnAuto.TextColor3 = Color3.new(1,1,1)
 end)
@@ -299,11 +302,11 @@ task.spawn(function()
             local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
             local seat = hum and hum.SeatPart
             
-            -- [NEW] AUTO SPAWN LOGIC BEFORE RACE
+            -- [AUTO SPAWN LOGIC]
             if not seat then
                 status.Text = "● SPAWNING VEHICLE..."
                 autoSpawnCar()
-                task.wait(2)
+                task.wait(2.5)
             end
             
             hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
@@ -312,23 +315,20 @@ task.spawn(function()
             if seat and seat:IsA("VehicleSeat") then
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 
-                applyDeepClean()
-                closePrizePopup()
+                applyDeepClean(); closePrizePopup()
                 
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                 car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
                 task.wait(0.05)
-                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                seat.AssemblyLinearVelocity = Vector3.new(0,0,0); seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                 
                 status.Text = "● WAITING RIVAL..."
                 local rivalFound = false
                 repeat 
                     task.wait(1)
                     if seat then
-                        seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                        seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                        seat.AssemblyLinearVelocity = Vector3.new(0,0,0); seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                     end
                     for _, p in pairs(Players:GetPlayers()) do 
                         if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
@@ -346,8 +346,7 @@ task.spawn(function()
                         if not running then break end
                         status.Text = "● START IN: "..i.."s"
                         if seat then
-                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                            seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0); seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                         end
                         task.wait(1) 
                     end
@@ -357,8 +356,7 @@ task.spawn(function()
                             if not running or not seat.Parent then break end
                             status.Text = "● RACING: " .. i .. "/41"
                             local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
-                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                            seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0); seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                             car:PivotTo(cf)
                             task.wait(0.05)
                             seat.AssemblyLinearVelocity = cf.LookVector * 165
@@ -376,10 +374,7 @@ task.spawn(function()
                             sessionRaces = sessionRaces + 1
                             moneyLabel.Text = "Profit: $" .. totalMoneyEarned
                             raceLabel.Text = "Races: " .. sessionRaces
-                            
-                            task.spawn(function()
-                                sendWebhook(MAIN_WEBHOOK, gain, totalMoneyEarned, sessionRaces, false)
-                            end)
+                            task.spawn(function() sendWebhook(MAIN_WEBHOOK, gain, totalMoneyEarned, sessionRaces, false) end)
                         end
                         task.wait(2)
                     end
@@ -392,8 +387,7 @@ end)
 -- BUTTON LOGIC
 toggleBtn.MouseButton1Click:Connect(function()   
     isMinimized = not isMinimized
-    content.Visible = not isMinimized
-    tabContainer.Visible = not isMinimized
+    content.Visible = not isMinimized; tabContainer.Visible = not isMinimized
     frame:TweenSize(isMinimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 195), "Out", "Quad", 0.3, true)
     toggleBtn.Text = isMinimized and "+" or "−"
 end)
@@ -414,9 +408,7 @@ end)
 purgeBtn.MouseButton1Click:Connect(function() applyDeepClean() end)
 
 task.spawn(function()
-    while task.wait(1) do
-        fpsLabel.Text = "FPS: " .. (renderingEnabled and "Active" or "Reduced")
-    end
+    while task.wait(1) do fpsLabel.Text = "FPS: " .. (renderingEnabled and "Active" or "Reduced") end
 end)
 
 game:BindToClose(function() sendWebhook(STATUS_WEBHOOK, 0, totalMoneyEarned, sessionRaces, true) end)
