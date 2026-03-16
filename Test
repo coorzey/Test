@@ -46,10 +46,10 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - FIXED TARGETING ]]
+-- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - STRICT TARGETING ]]
 local function autoSpawnCar()
     pcall(function()
-        -- 1. Mencoba Remote Event (Bypass UI)
+        -- 1. Remote Spawn (Metode Tercepat)
         local spawnRemote = ReplicatedStorage:FindFirstChild("SpawnVehicle", true) or 
                             ReplicatedStorage:FindFirstChild("RequestVehicleSpawn", true)
         
@@ -67,37 +67,33 @@ local function autoSpawnCar()
         end
 
         if sidebarBtn then
-            -- Buka menu spawn
             for _, conn in pairs(getconnections(sidebarBtn.Activated)) do conn:Fire() end
-            task.wait(1)
+            task.wait(1.2) 
 
-            -- 3. LOGIKA BARU: Filter Kartu Mobil (Abaikan Get Vehicles)
+            -- 3. PERBAIKAN: Hanya Klik Jika Nama Mobil Sesuai (Lily Power TR450)
             for _, v in pairs(PlayerGui:GetDescendants()) do
-                -- Mencari ImageButton di dalam list Vehicles yang terlihat
-                if v:IsA("ImageButton") and v.Visible and (v.Name:find("TR450") or v.Parent.Name == "Vehicles") then
+                if v:IsA("ImageButton") and v.Visible and (v.Parent.Name == "Vehicles" or v.Name:find("TR450")) then
                     
-                    -- Hindari tombol "Get Vehicles" dengan mengecek apakah ada teks harga/angka di dalamnya
-                    local isVehicleCard = false
-                    for _, child in pairs(v:GetDescendants()) do
-                        if child:IsA("TextLabel") and (child.Text:find("#") or child.Text:find("%d")) then
-                            isVehicleCard = true
-                            break
+                    local isCorrectCar = false
+                    for _, txt in pairs(v:GetDescendants()) do
+                        if txt:IsA("TextLabel") then
+                            local lowerText = txt.Text:lower()
+                            if lowerText:find("lily") or lowerText:find("tr450") or lowerText:find("power") then
+                                isCorrectCar = true
+                                break
+                            end
                         end
                     end
 
-                    -- Pastikan bukan tombol Back atau Dealership
-                    local btnName = v.Name:lower()
-                    if isVehicleCard and not btnName:find("back") and not btnName:find("dealer") then
-                        -- Klik fisik ke tengah tombol menggunakan VirtualUser
+                    if isCorrectCar then
                         local pos = v.AbsolutePosition
                         local size = v.AbsoluteSize
                         VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
                         
-                        -- Trigger event UI
                         for _, conn in pairs(getconnections(v.MouseButton1Down)) do conn:Fire() end
                         for _, conn in pairs(getconnections(v.Activated)) do conn:Fire() end
                         for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
-                        break
+                        break 
                     end
                 end
             end
@@ -281,7 +277,6 @@ local function mainLoop()
                 autoSpawnCar()
                 task.wait(2.5)
             end
-            -- Logika TP StartPos dll dilanjutkan di sini sesuai script asli Anda
         end
     end
 end
