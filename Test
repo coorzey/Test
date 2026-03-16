@@ -46,7 +46,7 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - REVISED CLICK ]]
+-- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - FIXED CLICK ]]
 local function autoSpawnCar()
     pcall(function()
         -- 1. Mencoba Remote Event (Bypass UI)
@@ -57,7 +57,7 @@ local function autoSpawnCar()
             spawnRemote:FireServer("2018 Lily Power TR450") 
         end
 
-        -- 2. Simulasi Klik UI jika menu sudah terbuka (Berdasarkan Video)
+        -- 2. Mencari Sidebar Button
         local sidebarBtn = nil
         for _, v in pairs(PlayerGui:GetDescendants()) do
             if v.Name == "Spawn" and (v:IsA("ImageButton") or v:IsA("TextButton")) then
@@ -69,13 +69,21 @@ local function autoSpawnCar()
         if sidebarBtn then
             -- Klik sidebar jika menu belum muncul
             for _, conn in pairs(getconnections(sidebarBtn.Activated)) do conn:Fire() end
-            task.wait(0.8)
+            task.wait(1)
 
-            -- Klik tombol mobil spesifik di dalam ScrollingFrame
+            -- 3. PERBAIKAN: Klik mobil spesifik, bukan tombol menu (Dealership)
             for _, v in pairs(PlayerGui:GetDescendants()) do
-                -- Mencari ImageButton yang berada di dalam folder Vehicles atau yang memuat nama mobil
-                if v:IsA("ImageButton") and v.Visible and (v.Parent.Name == "Vehicles" or v.Name:find("TR450")) then
-                    -- Gunakan kombinasi klik yang lebih paksa karena ini sering terlewat
+                -- Filter ketat: Harus ImageButton, Harus Terlihat, dan Namanya mengandung TR450 atau Lily
+                if v:IsA("ImageButton") and v.Visible and (v.Name:find("TR450") or v.Name:find("Lily") or v.Parent.Name == "Vehicles") then
+                    -- Hindari klik tombol "Dealership" atau "Back"
+                    if v.Name:lower():find("back") or v.Name:lower():find("dealer") then continue end
+                    
+                    -- Paksa klik ke koordinat tombol agar tidak terlewat
+                    local pos = v.AbsolutePosition
+                    local size = v.AbsoluteSize
+                    VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
+                    
+                    -- Trigger semua koneksi klik
                     for _, conn in pairs(getconnections(v.MouseButton1Down)) do conn:Fire() end
                     for _, conn in pairs(getconnections(v.Activated)) do conn:Fire() end
                     for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
@@ -250,7 +258,6 @@ local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, autoFarmPage)
 local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, autoFarmPage)
 
 -- MINI HUD & MAIN LOOP BERLANJUT SEPERTI BIASA...
--- (Sisa skrip tetap sama untuk menjaga integritas fungsi koordinat)
 
 local function mainLoop()
     while true do
@@ -264,9 +271,6 @@ local function mainLoop()
                 autoSpawnCar()
                 task.wait(2.5)
             end
-            
-            -- Lanjut proses TP ke startPos dan Racing...
-            -- [Sesuai dengan logika V58.6 sebelumnya]
         end
     end
 end
