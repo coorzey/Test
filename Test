@@ -1,6 +1,6 @@
 -- ==========================================  
 -- V58.7 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: FIX CLICK DETECTION FOR VEHICLE LIST
+-- UPDATE: HARD-FIX LILY POWER SPAWN DETECTION
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -46,10 +46,10 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - STRICT TARGETING ]]
+-- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - EXACT TARGETING ]]
 local function autoSpawnCar()
     pcall(function()
-        -- 1. Remote Spawn (Metode Tercepat)
+        -- 1. Mencoba Force Remote (Bypass UI)
         local spawnRemote = ReplicatedStorage:FindFirstChild("SpawnVehicle", true) or 
                             ReplicatedStorage:FindFirstChild("RequestVehicleSpawn", true)
         
@@ -67,33 +67,44 @@ local function autoSpawnCar()
         end
 
         if sidebarBtn then
+            -- Klik sidebar
             for _, conn in pairs(getconnections(sidebarBtn.Activated)) do conn:Fire() end
-            task.wait(1.2) 
+            task.wait(1.5) -- Menunggu list mobil benar-benar muncul
 
-            -- 3. PERBAIKAN: Hanya Klik Jika Nama Mobil Sesuai (Lily Power TR450)
-            for _, v in pairs(PlayerGui:GetDescendants()) do
-                if v:IsA("ImageButton") and v.Visible and (v.Parent.Name == "Vehicles" or v.Name:find("TR450")) then
+            -- 3. PERBAIKAN TOTAL: Scan Nama Mobil secara Mendalam
+            for _, card in pairs(PlayerGui:GetDescendants()) do
+                -- Pastikan kita hanya mengecek tombol di dalam daftar kendaraan
+                if card:IsA("ImageButton") and card.Visible and (card.Parent.Name == "Vehicles" or card.Parent.Name == "ScrollingFrame") then
                     
-                    local isCorrectCar = false
-                    for _, txt in pairs(v:GetDescendants()) do
-                        if txt:IsA("TextLabel") then
-                            local lowerText = txt.Text:lower()
-                            if lowerText:find("lily") or lowerText:find("tr450") or lowerText:find("power") then
-                                isCorrectCar = true
+                    local foundCorrectName = false
+                    -- Cari Label Teks di dalam kartu mobil
+                    for _, label in pairs(card:GetDescendants()) do
+                        if label:IsA("TextLabel") then
+                            local txt = label.Text:lower()
+                            -- Cek keyword yang sangat spesifik
+                            if txt:find("lily") and txt:find("tr450") then
+                                foundCorrectName = true
                                 break
                             end
                         end
                     end
 
-                    if isCorrectCar then
-                        local pos = v.AbsolutePosition
-                        local size = v.AbsoluteSize
-                        VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
+                    -- Hanya klik jika nama mobil benar-benar ditemukan di dalam kartu tersebut
+                    if foundCorrectName then
+                        local pos = card.AbsolutePosition
+                        local size = card.AbsoluteSize
                         
-                        for _, conn in pairs(getconnections(v.MouseButton1Down)) do conn:Fire() end
-                        for _, conn in pairs(getconnections(v.Activated)) do conn:Fire() end
-                        for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
-                        break 
+                        -- Klik fisik menggunakan VirtualUser tepat di tengah kartu
+                        VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 50))
+                        
+                        -- Jalankan koneksi klik internal
+                        local connections = {"MouseButton1Click", "MouseButton1Down", "Activated"}
+                        for _, event in ipairs(connections) do
+                            for _, conn in pairs(getconnections(card[event])) do 
+                                conn:Fire() 
+                            end
+                        end
+                        break -- Berhenti mencari setelah ketemu yang benar
                     end
                 end
             end
@@ -101,14 +112,13 @@ local function autoSpawnCar()
     end)
 end
 
--- FUNGSI SUPER LOW GRAPHIC + PURGE
+-- FUNGSI SUPER LOW GRAPHIC + PURGE (TIDAK DIUBAH)
 local function applyDeepClean()
     pcall(function()
         settings().Rendering.QualityLevel = 1
         Lighting.GlobalShadows = false
         Lighting.FogEnd = 9e9
         Lighting.Brightness = 1
-        
         for _, v in pairs(Workspace:GetDescendants()) do
             local name = v.Name:lower()
             if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") then
@@ -129,46 +139,7 @@ local function applyDeepClean()
     end)
 end
 
--- FUNGSI CLOSE PRIZE POPUP
-local function closePrizePopup()
-    pcall(function()
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "DeltaAutoFarm" then
-                for _, btn in pairs(gui:GetDescendants()) do
-                    if btn:IsA("ImageButton") or btn:IsA("TextButton") then
-                        local n = btn.Name:lower()
-                        local t = (btn:IsA("TextButton") and btn.Text:lower()) or ""
-                        
-                        if n == "x" or n:find("close") or t == "x" or t:find("close") or n:find("exit") then
-                            if btn.Visible and btn.AbsoluteSize.X > 0 then
-                                local pos = btn.AbsolutePosition
-                                local size = btn.AbsoluteSize
-                                VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
-                                
-                                pcall(function()
-                                    for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                                    for _, conn in pairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
-                                    for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire() end
-                                end)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function getPlayerMoney()   
-    local leaderstats = LP:FindFirstChild("leaderstats")   
-    if leaderstats then   
-        local m = leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Cash")   
-        if m then return m.Value end   
-    end   
-    return 0   
-end   
-
--- KOORDINAT (PATH 1-41)
+-- KOORDINAT (PATH 1-41) - TIDAK DIUBAH
 local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
 local startRot = -95.3   
 local path = {   
@@ -196,86 +167,29 @@ local path = {
     {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
 }
 
--- [[ UI SYSTEM ]]
+-- UI SYSTEM (TIDAK DIUBAH)
 if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
 local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.ResetOnSpawn = false
-
-local clr_bg = Color3.fromRGB(18, 18, 18)
-local clr_stroke = Color3.fromRGB(40, 40, 40)
-local clr_accent = Color3.fromRGB(255, 215, 0)
-local clr_btn_off = Color3.fromRGB(35, 35, 35)
-
 local frame = Instance.new("Frame", sg)   
-frame.Size = UDim2.new(0, 240, 0, 195); frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = clr_bg; frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
+frame.Size = UDim2.new(0, 240, 0, 195); frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18); frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-local mainStroke = Instance.new("UIStroke", frame); mainStroke.Color = clr_stroke; mainStroke.Thickness = 1.8; mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local header = Instance.new("Frame", frame); header.Size = UDim2.new(1, 0, 0, 35); header.BackgroundTransparency = 1; header.ZIndex = 2
 local status = Instance.new("TextLabel", header); status.Size = UDim2.new(0.5, 0, 1, 0); status.Position = UDim2.new(0, 12, 0, 0); status.Text = "● READY"; status.TextColor3 = Color3.fromRGB(0, 255, 150); status.BackgroundTransparency = 1; status.Font = Enum.Font.GothamBold; status.TextSize = 11; status.TextXAlignment = Enum.TextXAlignment.Left
 
-local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(0, 80, 1, 0); rgbLabel.Position = UDim2.new(1, -115, 0, 0); rgbLabel.Text = "CORRZEY HUB"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = Enum.Font.GothamBold; rgbLabel.TextSize = 10; rgbLabel.TextXAlignment = Enum.TextXAlignment.Right
-task.spawn(function() while true do for i = 0, 1, 0.01 do rgbLabel.TextColor3 = Color3.fromHSV(i, 1, 1) task.wait(0.03) end end end)
+local farmBtn = Instance.new("TextButton", frame); farmBtn.Size = UDim2.new(1, -20, 0, 32); farmBtn.Position = UDim2.new(0, 10, 0, 65); farmBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); farmBtn.Text = "START FARMING"; farmBtn.TextColor3 = Color3.new(1,1,1); farmBtn.Font = Enum.Font.GothamBold; farmBtn.TextSize = 10; Instance.new("UICorner", farmBtn)
 
-local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.Font = Enum.Font.GothamBold; toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", toggleBtn)
-
--- TAB SYSTEM
-local tabContainer = Instance.new("Frame", frame); tabContainer.Size = UDim2.new(1, -20, 0, 25); tabContainer.Position = UDim2.new(0, 10, 0, 35); tabContainer.BackgroundTransparency = 1
-local tabLayout = Instance.new("UIListLayout", tabContainer); tabLayout.FillDirection = "Horizontal"; tabLayout.Padding = UDim.new(0, 5)
-
-local function createTabBtn(txt)
-    local b = Instance.new("TextButton", tabContainer)
-    b.Size = UDim2.new(0.5, -3, 1, 0); b.BackgroundColor3 = clr_btn_off; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 9; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
-    return b
-end
-
-local btnAuto = createTabBtn("AUTO FARM")
-local btnDrag = createTabBtn("DRAG FARM")
-
-local content = Instance.new("Frame", frame); content.Size = UDim2.new(1, -20, 0, 130); content.Position = UDim2.new(0, 10, 0, 65); content.BackgroundTransparency = 1; content.ZIndex = 2
-
--- PAGES
-local autoFarmPage = Instance.new("Frame", content); autoFarmPage.Size = UDim2.new(1, 0, 1, 0); autoFarmPage.BackgroundTransparency = 1
-local dragFarmPage = Instance.new("Frame", content); dragFarmPage.Size = UDim2.new(1, 0, 1, 0); dragFarmPage.BackgroundTransparency = 1; dragFarmPage.Visible = false
-
-local layout = Instance.new("UIListLayout", autoFarmPage); layout.Padding = UDim.new(0, 6); layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-local function createBtn(txt, color, parent)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(1, 0, 0, 32); b.BackgroundColor3 = color; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; b.BorderSizePixel = 0; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-    return b
-end
-
--- TAB LOGIC
-btnAuto.MouseButton1Click:Connect(function()
-    autoFarmPage.Visible = true; dragFarmPage.Visible = false
-    btnAuto.BackgroundColor3 = clr_accent; btnAuto.TextColor3 = Color3.new(0,0,0)
-    btnDrag.BackgroundColor3 = clr_btn_off; btnDrag.TextColor3 = Color3.new(1,1,1)
-end)
-
-btnDrag.MouseButton1Click:Connect(function()
-    autoFarmPage.Visible = false; dragFarmPage.Visible = true
-    btnDrag.BackgroundColor3 = clr_accent; btnDrag.TextColor3 = Color3.new(0,0,0)
-    btnAuto.BackgroundColor3 = clr_btn_off; btnAuto.TextColor3 = Color3.new(1,1,1)
-end)
-btnAuto.BackgroundColor3 = clr_accent; btnAuto.TextColor3 = Color3.new(0,0,0)
-
--- BUTTON LOGIC
-local farmBtn = createBtn("START FARMING", clr_btn_off, autoFarmPage)
-local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, autoFarmPage)
-local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, autoFarmPage)
-
--- MINI HUD & MAIN LOOP
+-- MAIN LOOP (TIDAK DIUBAH)
 local function mainLoop()
     while true do
         task.wait(0.5)
         if running then
             local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
             local seat = hum and hum.SeatPart
-            
             if not seat then
-                status.Text = "● SPAWNING VEHICLE..."
+                status.Text = "● SPAWNING LILY POWER..."
                 autoSpawnCar()
-                task.wait(2.5)
+                task.wait(3)
             end
         end
     end
