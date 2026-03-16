@@ -46,7 +46,7 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - FIXED CLICK ]]
+-- [[ FUNGSI AUTO SPAWN KHUSUS MIDNIGHT CHASERS - FIXED TARGETING ]]
 local function autoSpawnCar()
     pcall(function()
         -- 1. Mencoba Remote Event (Bypass UI)
@@ -67,27 +67,38 @@ local function autoSpawnCar()
         end
 
         if sidebarBtn then
-            -- Klik sidebar jika menu belum muncul
+            -- Buka menu spawn
             for _, conn in pairs(getconnections(sidebarBtn.Activated)) do conn:Fire() end
             task.wait(1)
 
-            -- 3. PERBAIKAN: Klik mobil spesifik, bukan tombol menu (Dealership)
+            -- 3. LOGIKA BARU: Filter Kartu Mobil (Abaikan Get Vehicles)
             for _, v in pairs(PlayerGui:GetDescendants()) do
-                -- Filter ketat: Harus ImageButton, Harus Terlihat, dan Namanya mengandung TR450 atau Lily
-                if v:IsA("ImageButton") and v.Visible and (v.Name:find("TR450") or v.Name:find("Lily") or v.Parent.Name == "Vehicles") then
-                    -- Hindari klik tombol "Dealership" atau "Back"
-                    if v.Name:lower():find("back") or v.Name:lower():find("dealer") then continue end
+                -- Mencari ImageButton di dalam list Vehicles yang terlihat
+                if v:IsA("ImageButton") and v.Visible and (v.Name:find("TR450") or v.Parent.Name == "Vehicles") then
                     
-                    -- Paksa klik ke koordinat tombol agar tidak terlewat
-                    local pos = v.AbsolutePosition
-                    local size = v.AbsoluteSize
-                    VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
-                    
-                    -- Trigger semua koneksi klik
-                    for _, conn in pairs(getconnections(v.MouseButton1Down)) do conn:Fire() end
-                    for _, conn in pairs(getconnections(v.Activated)) do conn:Fire() end
-                    for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
-                    break
+                    -- Hindari tombol "Get Vehicles" dengan mengecek apakah ada teks harga/angka di dalamnya
+                    local isVehicleCard = false
+                    for _, child in pairs(v:GetDescendants()) do
+                        if child:IsA("TextLabel") and (child.Text:find("#") or child.Text:find("%d")) then
+                            isVehicleCard = true
+                            break
+                        end
+                    end
+
+                    -- Pastikan bukan tombol Back atau Dealership
+                    local btnName = v.Name:lower()
+                    if isVehicleCard and not btnName:find("back") and not btnName:find("dealer") then
+                        -- Klik fisik ke tengah tombol menggunakan VirtualUser
+                        local pos = v.AbsolutePosition
+                        local size = v.AbsoluteSize
+                        VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
+                        
+                        -- Trigger event UI
+                        for _, conn in pairs(getconnections(v.MouseButton1Down)) do conn:Fire() end
+                        for _, conn in pairs(getconnections(v.Activated)) do conn:Fire() end
+                        for _, conn in pairs(getconnections(v.MouseButton1Click)) do conn:Fire() end
+                        break
+                    end
                 end
             end
         end
@@ -257,8 +268,7 @@ local farmBtn = createBtn("START FARMING", clr_btn_off, autoFarmPage)
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, autoFarmPage)
 local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, autoFarmPage)
 
--- MINI HUD & MAIN LOOP BERLANJUT SEPERTI BIASA...
-
+-- MINI HUD & MAIN LOOP
 local function mainLoop()
     while true do
         task.wait(0.5)
@@ -271,6 +281,7 @@ local function mainLoop()
                 autoSpawnCar()
                 task.wait(2.5)
             end
+            -- Logika TP StartPos dll dilanjutkan di sini sesuai script asli Anda
         end
     end
 end
