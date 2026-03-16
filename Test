@@ -1,6 +1,6 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: INTEGRATED AUTO SPAWN + RESTORED HUD
+-- UPDATE: FULL FEATURES RESTORED + AUTO SPAWN
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -10,6 +10,7 @@ local VirtualUser = game:GetService("VirtualUser")
 local PlayerGui = LP:WaitForChild("PlayerGui")   
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 -- [NEW] OPTIMIZATION GLOBALS
 local renderingEnabled = true
@@ -48,7 +49,6 @@ local function autoSpawnCar()
     pcall(function()
         local spawnRemote = ReplicatedStorage:FindFirstChild("SpawnVehicle", true) or 
                             ReplicatedStorage:FindFirstChild("RequestVehicleSpawn", true)
-        
         if spawnRemote then spawnRemote:FireServer("2018 Lily Power TR450") end
 
         local sidebarBtn = nil
@@ -62,16 +62,12 @@ local function autoSpawnCar()
         if sidebarBtn then
             for _, conn in pairs(getconnections(sidebarBtn.Activated)) do conn:Fire() end
             task.wait(1.5)
-
             for _, card in pairs(PlayerGui:GetDescendants()) do
                 if card:IsA("ImageButton") and card.Visible and (card.Parent.Name == "Vehicles" or card.Parent.Name == "ScrollingFrame") then
                     local match = false
                     for _, label in pairs(card:GetDescendants()) do
-                        if label:IsA("TextLabel") and label.Text:lower():find("lily") then
-                            match = true break
-                        end
+                        if label:IsA("TextLabel") and label.Text:lower():find("lily") then match = true break end
                     end
-
                     if match then
                         local pos = card.AbsolutePosition
                         local size = card.AbsoluteSize
@@ -91,7 +87,6 @@ local function applyDeepClean()
         settings().Rendering.QualityLevel = 1
         Lighting.GlobalShadows = false
         Lighting.FogEnd = 9e9
-        Lighting.Brightness = 1
         for _, v in pairs(Workspace:GetDescendants()) do
             local name = v.Name:lower()
             if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") then
@@ -100,8 +95,28 @@ local function applyDeepClean()
                 v.Material = Enum.Material.SmoothPlastic
                 v.Reflectance = 0
                 v.CastShadow = false
-            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") then
+            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
                 v:Destroy()
+            end
+        end
+    end)
+end
+
+-- FUNGSI CLOSE PRIZE POPUP
+local function closePrizePopup()
+    pcall(function()
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "DeltaAutoFarm" then
+                for _, btn in pairs(gui:GetDescendants()) do
+                    if btn:IsA("ImageButton") or btn:IsA("TextButton") then
+                        local n = btn.Name:lower()
+                        if n == "x" or n:find("close") or n:find("exit") then
+                            if btn.Visible and btn.AbsoluteSize.X > 0 then
+                                for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire() end
+                            end
+                        end
+                    end
+                end
             end
         end
     end)
@@ -119,36 +134,48 @@ end
 -- KOORDINAT (PATH 1-41)
 local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
 local startRot = -95.3   
-local path = { {pos = {3353.99, -15.28, 883.01}, rot = 68.97}, {pos = {3048.26, -15.26, 680.38}, rot = 68.89}, {pos = {2739.67, -15.11, 570.12}, rot = 70.95}, {pos = {2271.23, -1.68, 411.61}, rot = 73.02}, {pos = {1946.53, 14.22, 306.79}, rot = 71.72}, {pos = {1570.71, 20.61, 186.11}, rot = 74.46}, {pos = {1033.94, 20.61, 92.19}, rot = 87.54}, {pos = {688.36, 20.60, 85.04}, rot = 92.30}, {pos = {-24.31, 20.63, 84.78}, rot = 90.45}, {pos = {-583.41, 20.61, 88.00}, rot = 90.43}, {pos = {-1247.06, 16.11, 121.99}, rot = 101.03}, {pos = {-1910.41, -11.95, 276.76}, rot = 103.87}, {pos = {-2580.79, -8.75, 417.36}, rot = 101.97}, {pos = {-3175.10, 18.31, 542.23}, rot = 101.76}, {pos = {-3916.48, 23.47, 701.48}, rot = 101.44}, {pos = {-4630.57, 31.07, 839.62}, rot = 102.08}, {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55} }
+local path = {{pos={3353.99,-15.28,883.01},rot=68.97},{pos={3048.26,-15.26,680.38},rot=68.89},{pos={2739.67,-15.11,570.12},rot=70.95},{pos={2271.23,-1.68,411.61},rot=73.02},{pos={1946.53,14.22,306.79},rot=71.72},{pos={1570.71,20.61,186.11},rot=74.46},{pos={1033.94,20.61,92.19},rot=87.54},{pos={688.36,20.60,85.04},rot=92.30},{pos={-24.31,20.63,84.78},rot=90.45},{pos={-583.41,20.61,88.00},rot=90.43},{pos={-1247.06,16.11,121.99},rot=101.03},{pos={-1910.41,-11.95,276.76},rot=103.87},{pos={-2580.79,-8.75,417.36},rot=101.97},{pos={-3175.10,18.31,542.23},rot=101.76},{pos={-3916.48,23.47,701.48},rot=101.44},{pos={-4630.57,31.07,839.62},rot=102.08},{pos={-5534.23,19.75,1038.44},rot=102.18},{pos={-6557.41,9.80,1251.38},rot=101.13},{pos={-7277.41,9.80,1406.79},rot=106.41},{pos={-7794.60,9.80,1579.01},rot=111.81},{pos={-8263.78,9.56,1777.35},rot=112.83},{pos={-8805.38,-8.88,2007.14},rot=117.64},{pos={-9503.49,-69.46,2303.26},rot=113.14},{pos={-10147.54,-111.81,2578.72},rot=112.52},{pos={-10895.69,-105.88,2903.48},rot=115.66},{pos={-11552.18,-54.42,3172.93},rot=112.78},{pos={-12169.96,-17.11,3435.86},rot=112.92},{pos={-12767.61,-1.50,3748.61},rot=124.95},{pos={-13135.41,-0.86,4062.97},rot=135.41},{pos={-13366.22,-0.84,4319.31},rot=146.03},{pos={-13670.72,-2.93,4750.70},rot=143.42},{pos={-14030.56,-13.39,5288.52},rot=146.34},{pos={-14500.27,3.01,5985.70},rot=145.91},{pos={-14892.54,6.83,6582.37},rot=151.69},{pos={-15236.35,6.83,7290.60},rot=160.16},{pos={-15482.54,3.89,8031.16},rot=165.65},{pos={-15675.67,-7.72,8668.23},rot=162.54},{pos={-15927.57,-20.54,9489.28},rot=162.16},{pos={-16199.67,-2.75,10369.70},rot=162.77},{pos={-16348.46,8.41,11025.66},rot=171.59},{pos={-16377.87,8.41,11227.66},rot=171.48},{pos={-16519.88,10.92,12115.18},rot=169.55}}
+
+-- [[ WEBHOOK SYSTEM ]]
+local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
+local function sendWebhook(url, gain, total, races)
+    pcall(function()
+        local data = {["embeds"]={{["title"]="🚀 CORRZEY HUB REPORT",["fields"]={{["name"]="Gain",["value"]="$"..gain,["inline"]=true},{["name"]="Total",["value"]="$"..total,["inline"]=true},{["name"]="Races",["value"]=races.." Races",["inline"]=true}}}}
+        local req = request or http_request or (syn and syn.request)
+        if req then req({Url=url,Method="POST",Headers={["Content-Type"]="application/json"},Body=HttpService:JSONEncode(data)}) end
+    end)
+end
 
 -- [[ UI SYSTEM ]]
 if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
 local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.ResetOnSpawn = false; sg.DisplayOrder = 999
 
-local frame = Instance.new("Frame", sg)   
-frame.Size = UDim2.new(0, 240, 0, 155); frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18); frame.Active = true; frame.Draggable = true; Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", frame).Color = Color3.fromRGB(40,40,40)
-
+local frame = Instance.new("Frame", sg); frame.Size = UDim2.new(0, 240, 0, 155); frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18); frame.Active = true; frame.Draggable = true; Instance.new("UICorner", frame)
 local header = Instance.new("Frame", frame); header.Size = UDim2.new(1, 0, 0, 35); header.BackgroundTransparency = 1
-local status = Instance.new("TextLabel", header); status.Size = UDim2.new(0.5, 0, 1, 0); status.Position = UDim2.new(0, 12, 0, 0); status.Text = "● READY"; status.TextColor3 = Color3.fromRGB(0, 255, 150); status.BackgroundTransparency = 1; status.Font = "GothamBold"; status.TextSize = 11; status.TextXAlignment = "Left"
-
-local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", toggleBtn)
+local status = Instance.new("TextLabel", header); status.Size = UDim2.new(0.6, 0, 1, 0); status.Position = UDim2.new(0, 12, 0, 0); status.Text = "● READY"; status.TextColor3 = Color3.fromRGB(0, 255, 150); status.BackgroundTransparency = 1; status.Font = "GothamBold"; status.TextSize = 11; status.TextXAlignment = "Left"
+local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40); toggleBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", toggleBtn)
 
 local content = Instance.new("Frame", frame); content.Size = UDim2.new(1, -20, 0, 110); content.Position = UDim2.new(0, 10, 0, 40); content.BackgroundTransparency = 1
 local layout = Instance.new("UIListLayout", content); layout.Padding = UDim.new(0, 6)
 
-local farmBtn = Instance.new("TextButton", content); farmBtn.Size = UDim2.new(1, 0, 0, 35); farmBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); farmBtn.Text = "START FARMING"; farmBtn.TextColor3 = Color3.new(1,1,1); farmBtn.Font = "GothamBold"; Instance.new("UICorner", farmBtn)
+local function createBtn(txt)
+    local b = Instance.new("TextButton", content); b.Size = UDim2.new(1, 0, 0, 32); b.BackgroundColor3 = Color3.fromRGB(35, 35, 35); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = "GothamBold"; b.TextSize = 10; Instance.new("UICorner", b)
+    return b
+end
+local farmBtn = createBtn("START FARMING")
+local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)")
+local cpuBtn = createBtn("NEON DARK: OFF")
 
--- [[ RESTORED MINI HUD ]]
-local miniHud = Instance.new("Frame", sg); miniHud.Size = UDim2.new(0, 130, 0, 65); miniHud.Position = UDim2.new(0, 10, 0.02, 0); miniHud.BackgroundColor3 = Color3.fromRGB(10,10,10); Instance.new("UICorner", miniHud); Instance.new("UIStroke", miniHud).Color = Color3.fromRGB(255, 215, 0)
+-- [[ MINI HUD ]]
+local miniHud = Instance.new("Frame", sg); miniHud.Size = UDim2.new(0, 135, 0, 70); miniHud.Position = UDim2.new(0, 15, 0.05, 0); miniHud.BackgroundColor3 = Color3.fromRGB(12, 12, 12); miniHud.Draggable = true; miniHud.Active = true; Instance.new("UICorner", miniHud); Instance.new("UIStroke", miniHud).Color = Color3.fromRGB(255, 215, 0)
 local function createHudLbl(txt, col, pos)
     local l = Instance.new("TextLabel", miniHud); l.Size = UDim2.new(1, -20, 0, 20); l.Position = UDim2.new(0, 10, 0, pos); l.Text = txt; l.TextColor3 = col; l.Font = "GothamBold"; l.TextSize = 10; l.BackgroundTransparency = 1; l.TextXAlignment = "Left"; return l
 end
-local moneyLabel = createHudLbl("Profit: $0", Color3.fromRGB(255, 215, 0), 5)
-local raceLabel = createHudLbl("Races: 0", Color3.new(1,1,1), 23)
-local fpsLabel = createHudLbl("FPS: Active", Color3.fromRGB(0, 255, 255), 41)
+local moneyLabel = createHudLbl("Profit: $0", Color3.fromRGB(255, 215, 0), 8)
+local raceLabel = createHudLbl("Races: 0", Color3.new(1,1,1), 28)
+local fpsLabel = createHudLbl("Status: Idle", Color3.fromRGB(0, 255, 255), 48)
 
--- MAIN LOOP INTEGRATION
+-- [[ MAIN FARM LOGIC ]]
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -157,7 +184,7 @@ task.spawn(function()
             local seat = hum and hum.SeatPart
             
             if not seat then
-                status.Text = "● SPAWNING LILY POWER..."
+                status.Text = "● SPAWNING LILY..."
                 autoSpawnCar()
                 task.wait(3)
                 continue
@@ -166,6 +193,7 @@ task.spawn(function()
             if seat and seat:IsA("VehicleSeat") then
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 applyDeepClean()
+                closePrizePopup()
                 
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
@@ -174,6 +202,7 @@ task.spawn(function()
                 local rivalFound = false
                 repeat 
                     task.wait(1)
+                    if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
                     for _, p in pairs(Players:GetPlayers()) do 
                         if p ~= LP and p.Character and (p.Character.HumanoidRootPart.Position - startPos).Magnitude < 25 then 
                             rivalFound = true 
@@ -192,7 +221,7 @@ task.spawn(function()
                         car:PivotTo(cf)
                         task.wait(0.05)
                         seat.AssemblyLinearVelocity = cf.LookVector * 165
-                        task.wait(1.7) 
+                        task.wait(1.8) 
                     end
                     
                     local gain = getPlayerMoney() - moneyBeforeRace
@@ -201,6 +230,7 @@ task.spawn(function()
                         sessionRaces = sessionRaces + 1
                         moneyLabel.Text = "Profit: $" .. totalMoneyEarned
                         raceLabel.Text = "Races: " .. sessionRaces
+                        sendWebhook(MAIN_WEBHOOK, gain, totalMoneyEarned, sessionRaces)
                     end
                     task.wait(2)
                 end
@@ -209,11 +239,19 @@ task.spawn(function()
     end
 end)
 
+-- BUTTON LOGIC
 farmBtn.MouseButton1Click:Connect(function()
     running = not running
     farmBtn.Text = running and "STOP FARM" or "START FARMING"
-    farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
+    farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(35, 35, 35)
     if running then autoSpawnCar() end
+end)
+
+purgeBtn.MouseButton1Click:Connect(function() applyDeepClean() end)
+cpuBtn.MouseButton1Click:Connect(function()
+    renderingEnabled = not renderingEnabled
+    toggle3DRender(renderingEnabled)
+    cpuBtn.Text = renderingEnabled and "NEON DARK: OFF" or "NEON DARK: ON"
 end)
 
 toggleBtn.MouseButton1Click:Connect(function()
