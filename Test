@@ -1,24 +1,122 @@
 -- ==========================================  
--- MIDNIGHT CHASERS - OPTIMIZED AUTO-FARM
--- VERSION: 58.6 (STABLE)
--- FIX: TELEPORT SMOOTHING & AUTO-CLAIM
+-- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
+-- UPDATE: STABLE DUAL WEBHOOK + CLOUD OPTIMIZED
+-- FIX: ANCHOR-LIKE POSITIONING (NO SLIDING)
 -- ==========================================  
-
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
 local Workspace = game:GetService("Workspace")   
+local Lighting = game:GetService("Lighting")   
 local VirtualUser = game:GetService("VirtualUser")
-local RunService = game:GetService("RunService")
 local PlayerGui = LP:WaitForChild("PlayerGui")   
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
 
--- [[ SETTINGS ]]
-local running = false
-local totalMoneyEarned = 0
-local sessionRaces = 0
-local startPos = Vector3.new(3259.74, -15.28, 1014.49)
-local startRot = -95.3
+-- [NEW] OPTIMIZATION GLOBALS
+local renderingEnabled = true
+local function toggle3DRender(mode)
+    renderingEnabled = mode
+    RunService:Set3dRenderingEnabled(mode)
+end
 
--- [[ PATH DATA ]]
+-- [NEW] AUTO MEMORY CLEANER
+task.spawn(function()
+    while task.wait(60) do
+        collectgarbage("collect")
+    end
+end)
+
+-- [REPLACED] SUPER ANTI-AFK
+for _, v in pairs(getconnections(LP.Idled)) do
+    v:Disable()
+end
+
+task.spawn(function()
+    while task.wait(20) do
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+            VirtualUser:SetKeyDown("w")
+            task.wait(0.1)
+            VirtualUser:SetKeyUp("w")
+        end)
+    end
+end)
+
+local totalMoneyEarned, sessionRaces = 0, 0
+local moneyBeforeRace = 0
+local running, isMinimized = false, false
+
+-- FUNGSI SUPER LOW GRAPHIC + PURGE
+local function applyDeepClean()
+    pcall(function()
+        settings().Rendering.QualityLevel = 1
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        Lighting.Brightness = 1
+        
+        for _, v in pairs(Workspace:GetDescendants()) do
+            local name = v.Name:lower()
+            if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") then
+                if not v:IsDescendantOf(LP.Character) then v:Destroy() end
+            elseif v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+                v.CastShadow = false
+                if name:find("tree") or name:find("grass") or name:find("bush") or name:find("leaf") then
+                    v:Destroy()
+                end
+            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Sky") or v:IsA("Explosion") then
+                v:Destroy()
+            elseif v:IsA("MeshPart") then
+                v.MeshId = ""
+            end
+        end
+    end)
+end
+
+-- FUNGSI CLOSE PRIZE POPUP
+local function closePrizePopup()
+    pcall(function()
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "DeltaAutoFarm" then
+                for _, btn in pairs(gui:GetDescendants()) do
+                    if btn:IsA("ImageButton") or btn:IsA("TextButton") then
+                        local n = btn.Name:lower()
+                        local t = (btn:IsA("TextButton") and btn.Text:lower()) or ""
+                        
+                        if n == "x" or n:find("close") or t == "x" or t:find("close") or n:find("exit") then
+                            if btn.Visible and btn.AbsoluteSize.X > 0 then
+                                local pos = btn.AbsolutePosition
+                                local size = btn.AbsoluteSize
+                                VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
+                                
+                                pcall(function()
+                                    for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in pairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
+                                    for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire() end
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function getPlayerMoney()   
+    local leaderstats = LP:FindFirstChild("leaderstats")   
+    if leaderstats then   
+        local m = leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Cash")   
+        if m then return m.Value end   
+    end   
+    return 0   
+end   
+
+-- KOORDINAT (PATH 1-41)
+local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
+local startRot = -95.3   
 local path = {   
     {pos = {3353.99, -15.28, 883.01}, rot = 68.97}, {pos = {3048.26, -15.26, 680.38}, rot = 68.89},
     {pos = {2739.67, -15.11, 570.12}, rot = 70.95}, {pos = {2271.23, -1.68, 411.61}, rot = 73.02},
@@ -28,134 +126,271 @@ local path = {
     {pos = {-1247.06, 16.11, 121.99}, rot = 101.03}, {pos = {-1910.41, -11.95, 276.76}, rot = 103.87},
     {pos = {-2580.79, -8.75, 417.36}, rot = 101.97}, {pos = {-3175.10, 18.31, 542.23}, rot = 101.76},
     {pos = {-3916.48, 23.47, 701.48}, rot = 101.44}, {pos = {-4630.57, 31.07, 839.62}, rot = 102.08},
-    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, 
-    {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, 
-    {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, 
-    {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, 
-    {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, 
-    {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, 
-    {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, 
-    {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, 
-    {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, 
-    {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, 
-    {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, 
-    {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, 
-    {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
+    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, 
+    {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, 
+    {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, 
+    {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, 
+    {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, 
+    {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, 
+    {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, 
+    {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, 
+    {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, 
+    {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, 
+    {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, 
+    {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, 
+    {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, 
+    {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
 }
 
--- [[ UTILITIES ]]
-local function getMoney()
-    local ls = LP:FindFirstChild("leaderstats")
-    return (ls and (ls:FindFirstChild("Money") or ls:FindFirstChild("Cash"))) and ls.Money.Value or 0
+-- [[ UI SYSTEM ]]
+if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
+local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.ResetOnSpawn = false
+
+local clr_bg = Color3.fromRGB(18, 18, 18)
+local clr_stroke = Color3.fromRGB(40, 40, 40)
+local clr_accent = Color3.fromRGB(255, 215, 0)
+local clr_btn_off = Color3.fromRGB(35, 35, 35)
+
+local frame = Instance.new("Frame", sg)   
+frame.Size = UDim2.new(0, 240, 0, 155); frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = clr_bg; frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+local mainStroke = Instance.new("UIStroke", frame); mainStroke.Color = clr_stroke; mainStroke.Thickness = 1.8; mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local header = Instance.new("Frame", frame); header.Size = UDim2.new(1, 0, 0, 35); header.BackgroundTransparency = 1; header.ZIndex = 2
+local status = Instance.new("TextLabel", header); status.Size = UDim2.new(0.5, 0, 1, 0); status.Position = UDim2.new(0, 12, 0, 0); status.Text = "● READY"; status.TextColor3 = Color3.fromRGB(0, 255, 150); status.BackgroundTransparency = 1; status.Font = Enum.Font.GothamBold; status.TextSize = 11; status.TextXAlignment = Enum.TextXAlignment.Left
+
+local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(0, 80, 1, 0); rgbLabel.Position = UDim2.new(1, -115, 0, 0); rgbLabel.Text = "CORRZEY HUB"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = Enum.Font.GothamBold; rgbLabel.TextSize = 10; rgbLabel.TextXAlignment = Enum.TextXAlignment.Right
+task.spawn(function() while true do for i = 0, 1, 0.01 do rgbLabel.TextColor3 = Color3.fromHSV(i, 1, 1) task.wait(0.03) end end end)
+
+local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.Font = Enum.Font.GothamBold; toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", toggleBtn)
+
+local content = Instance.new("Frame", frame); content.Size = UDim2.new(1, -20, 0, 110); content.Position = UDim2.new(0, 10, 0, 40); content.BackgroundTransparency = 1; content.ZIndex = 2
+local layout = Instance.new("UIListLayout", content); layout.Padding = UDim.new(0, 6); layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local function createBtn(txt, color, parent)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(1, 0, 0, 32); b.BackgroundColor3 = color; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; b.BorderSizePixel = 0; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    return b
 end
 
-local function cleanMemory()
-    collectgarbage("collect")
-end
+local farmBtn = createBtn("START FARMING", clr_btn_off, content)
+local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, content)
+local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, content)
+local dtStatusLabel = Instance.new("TextLabel", content); dtStatusLabel.Size = UDim2.new(1, 0, 0, 20); dtStatusLabel.Text = "DELAY: 0s"; dtStatusLabel.TextColor3 = Color3.new(0.6,0.6,0.6); dtStatusLabel.BackgroundTransparency = 1; dtStatusLabel.Font = Enum.Font.GothamBold; dtStatusLabel.TextSize = 10
 
--- [[ AUTO CLAIM BYPASS ]]
-local function autoClaim()
+-- MINI HUD
+local miniHud = Instance.new("Frame", sg); miniHud.Size = UDim2.new(0, 130, 0, 65); miniHud.Position = UDim2.new(0, 10, 0.02, 0); miniHud.BackgroundColor3 = Color3.fromRGB(10,10,10); miniHud.Draggable = true; miniHud.Active = true; Instance.new("UICorner", miniHud)
+local hs = Instance.new("UIStroke", miniHud); hs.Color = clr_accent; hs.Thickness = 1.2
+
+local function createHudLbl(txt, col, pos)
+    local l = Instance.new("TextLabel", miniHud); l.Size = UDim2.new(1, -20, 0, 20); l.Position = UDim2.new(0, 10, 0, pos); l.Text = txt; l.TextColor3 = col; l.Font = Enum.Font.GothamBold; l.TextSize = 10; l.BackgroundTransparency = 1; l.TextXAlignment = "Left"; return l
+end
+local moneyLabel = createHudLbl("Profit: $0", clr_accent, 5)
+local raceLabel = createHudLbl("Races: 0", Color3.new(1,1,1), 23)
+local fpsLabel = createHudLbl("FPS: 0", Color3.fromRGB(0, 255, 255), 41)
+
+-- WEBHOOK CORE
+local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
+local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
+
+local HttpService = game:GetService("HttpService")
+local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
+
+local function sendWebhook(url, gain, total, races, isOffline)
+    if not url or url == "" then return end
     pcall(function()
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") then
-                for _, btn in pairs(gui:GetDescendants()) do
-                    if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-                        local t = btn:IsA("TextButton") and btn.Text:lower() or ""
-                        local n = btn.Name:lower()
-                        if t:find("claim") or t:find("collect") or n:find("close") or t == "x" then
-                            -- Simulasi klik tanpa menggerakkan mouse asli
-                            for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                        end
-                    end
-                end
-            end
+        local data = {
+            ["embeds"] = {{
+                ["title"] = isOffline and "⚠️ STUCK DETECTED" or "🚀 CORRZEY HUB - REPORT",
+                ["color"] = isOffline and 16711680 or 65430,
+                ["fields"] = {
+                    {["name"] = "👤 Player", ["value"] = "||" .. tostring(LP.Name) .. "||", ["inline"] = true},
+                    {["name"] = "💰 Race Profit", ["value"] = "```$" .. tostring(gain) .. "```", ["inline"] = true},
+                    {["name"] = "📈 Total Profit", ["value"] = "```$" .. tostring(total) .. "```", ["inline"] = true},
+                    {["name"] = "🏁 Total Races", ["value"] = tostring(races) .. " Races", ["inline"] = true},
+                },
+                ["footer"] = {["text"] = "V58.6 • " .. os.date("%X")},
+                ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+            }}
+        }
+        local payload = HttpService:JSONEncode(data)
+        if httpRequest then
+            httpRequest({Url = url, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = payload})
+        else
+            HttpService:PostAsync(url, payload)
         end
     end)
 end
 
--- [[ ANTI-AFK ENGINE ]]
-for _, v in pairs(getconnections(LP.Idled)) do v:Disable() end
+-- MAIN LOOP
 task.spawn(function()
-    while task.wait(30) do
-        VirtualUser:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
-        task.wait(0.1)
-        VirtualUser:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
+    while true do
+        task.wait(0.5)
+        if running then
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            local seat = hum and hum.SeatPart
+            if seat and seat:IsA("VehicleSeat") then
+                local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
+                
+                applyDeepClean()
+                closePrizePopup()
+                
+                -- [[ FIX: FORCE STOP BEFORE TELEPORT ]]
+                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
+                -- [[ FIX: DOUBLE RESET AFTER TELEPORT ]]
+                task.wait(0.05)
+                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                
+                status.Text = "● WAITING RIVAL..."
+                local rivalFound = false
+                repeat 
+                    task.wait(1)
+                    if seat then
+                        seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                        seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                    end
+                    for _, p in pairs(Players:GetPlayers()) do 
+                        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local rHum = p.Character:FindFirstChildOfClass("Humanoid")
+                            if (p.Character.HumanoidRootPart.Position - startPos).Magnitude < 25 and (rHum and rHum.SeatPart) then 
+                                rivalFound = true 
+                            end 
+                        end
+                    end
+                until not running or rivalFound
+                
+                if running and rivalFound then
+                    moneyBeforeRace = getPlayerMoney()
+                    for i = 18, 1, -1 do 
+                        if not running then break end
+                        status.Text = "● START IN: "..i.."s"
+                        -- Force diam selama countdown
+                        if seat then
+                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                            seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                        end
+                        task.wait(1) 
+                    end
+                    
+                    if running then
+                        for i, d in ipairs(path) do
+                            if not running or not seat.Parent then break end
+                            status.Text = "● RACING: " .. i .. "/41"
+                            local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
+                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                            seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                            car:PivotTo(cf)
+                            task.wait(0.05)
+                            seat.AssemblyLinearVelocity = cf.LookVector * 165
+                            task.wait(math.random(15, 18)/10) 
+                        end
+                        
+                        status.Text = "● FINISHING..."
+                        task.wait(3)
+                        
+                        local currentMoney = getPlayerMoney()
+                        local gain = currentMoney - moneyBeforeRace
+                        
+                        if gain > 0 then 
+                            totalMoneyEarned = totalMoneyEarned + gain
+                            sessionRaces = sessionRaces + 1
+                            moneyLabel.Text = "Profit: $" .. totalMoneyEarned
+                            raceLabel.Text = "Races: " .. sessionRaces
+                            
+                            task.spawn(function()
+                                sendWebhook(MAIN_WEBHOOK, gain, totalMoneyEarned, sessionRaces, false)
+                            end)
+                        end
+                        task.wait(2)
+                    end
+                end
+            else status.Text = "● SIT IN CAR!" end
+        end
     end
 end)
 
--- [[ UI SETUP ]]
-if PlayerGui:FindFirstChild("MidnightFarm") then PlayerGui.MidnightFarm:Destroy() end
-local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "MidnightFarm"
-local frame = Instance.new("Frame", sg); frame.Size = UDim2.new(0, 200, 0, 100); frame.Position = UDim2.new(0.5, -100, 0.1, 0); frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Instance.new("UICorner", frame)
-
-local title = Instance.new("TextLabel", frame); title.Size = UDim2.new(1, 0, 0, 30); title.Text = "CORRZEY FARM"; title.TextColor3 = Color3.new(1,1,1); title.BackgroundTransparency = 1
-local statusLbl = Instance.new("TextLabel", frame); statusLbl.Size = UDim2.new(1, 0, 0, 30); statusLbl.Position = UDim2.new(0,0,0.3,0); statusLbl.Text = "Status: Idle"; statusLbl.TextColor3 = Color3.new(0.8,0.8,0.8); statusLbl.BackgroundTransparency = 1
-local toggleBtn = Instance.new("TextButton", frame); toggleBtn.Size = UDim2.new(0.8, 0, 0, 30); toggleBtn.Position = UDim2.new(0.1, 0, 0.6, 0); toggleBtn.Text = "START"; toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-Instance.new("UICorner", toggleBtn)
-
--- [[ MAIN FARM LOGIC ]]
-toggleBtn.MouseButton1Click:Connect(function()
-    running = not running
-    toggleBtn.Text = running and "STOP" or "START"
-    toggleBtn.BackgroundColor3 = running and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(0, 150, 0)
+-- BUTTON LOGIC
+toggleBtn.MouseButton1Click:Connect(function()   
+    isMinimized = not isMinimized
+    content.Visible = not isMinimized
+    -- UPDATE SIZE UNTUK MENAMPUNG FITUR BARU
+    frame:TweenSize(isMinimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 245), "Out", "Quad", 0.3, true)
+    toggleBtn.Text = isMinimized and "+" or "−"
 end)
 
+farmBtn.MouseButton1Click:Connect(function()
+    running = not running
+    farmBtn.Text = running and "STOP FARM" or "START FARMING"
+    farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
+end)
+
+cpuBtn.MouseButton1Click:Connect(function()
+    renderingEnabled = not renderingEnabled
+    toggle3DRender(renderingEnabled)
+    cpuBtn.Text = renderingEnabled and "NEON DARK: OFF" or "NEON DARK: ON"
+end)
+
+purgeBtn.MouseButton1Click:Connect(function() applyDeepClean() end)
+
 task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if running then
-            local char = LP.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local seat = hum and hum.SeatPart
-            
-            if seat and seat:IsA("VehicleSeat") then
-                local car = seat.Parent
-                while car and not car:IsA("Model") do car = car.Parent end
-                
-                -- 1. Reset Position to Start
-                statusLbl.Text = "Status: Teleporting to Start"
-                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                car:PivotTo(CFrame.new(startPos) * CFrame.Angles(0, math.rad(startRot), 0))
-                
-                -- 2. Wait for Rival/Timer
-                task.wait(2) 
-                local mBefore = getMoney()
-                
-                -- 3. Racing Loop
-                for i, d in ipairs(path) do
-                    if not running or not seat.Parent then break end
-                    statusLbl.Text = "Racing: " .. i .. "/" .. #path
-                    
-                    local targetCF = CFrame.new(d.pos[1], d.pos[2] + 2, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
-                    
-                    -- Stabilize Car before TP
-                    seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                    seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                    car:PivotTo(targetCF)
-                    
-                    -- Kecepatan Simulasi (Bypass deteksi instan)
-                    task.wait(0.2) 
-                end
-                
-                -- 4. Finishing
-                statusLbl.Text = "Status: Claiming..."
-                task.wait(1)
-                autoClaim()
-                
-                local mAfter = getMoney()
-                if mAfter > mBefore then
-                    totalMoneyEarned = totalMoneyEarned + (mAfter - mBefore)
-                    sessionRaces = sessionRaces + 1
-                    print("Earned: " .. (mAfter - mBefore) .. " | Total: " .. totalMoneyEarned)
-                end
-                
-                cleanMemory()
-            else
-                statusLbl.Text = "Status: Please Sit in Car"
-            end
+    while task.wait(1) do
+        fpsLabel.Text = "FPS: " .. (renderingEnabled and "Active" or "Reduced")
+    end
+end)
+
+game:BindToClose(function() sendWebhook(STATUS_WEBHOOK, 0, totalMoneyEarned, sessionRaces, true) end)
+
+-- // ========================================== //
+-- // TAMBAHAN: PRIVATE SERVER JOINER & SAVE     //
+-- // ========================================== //
+
+local FileName = "CorrzeyHub_PS_Config.json"
+
+local function SavePSLink(link)
+    pcall(function() writefile(FileName, HttpService:JSONEncode({PS_Link = link})) end)
+end
+
+local function LoadPSLink()
+    if isfile(FileName) then
+        local s, data = pcall(function() return HttpService:JSONDecode(readfile(FileName)) end)
+        if s and data then return data.PS_Link end
+    end
+    return ""
+end
+
+local PSBox = Instance.new("TextBox", content)
+PSBox.Name = "PS_Input"
+PSBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+PSBox.Size = UDim2.new(1, 0, 0, 30)
+PSBox.Font = Enum.Font.GothamSemibold
+PSBox.PlaceholderText = "Paste Link PS..."
+PSBox.Text = LoadPSLink()
+PSBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+PSBox.TextSize = 10
+Instance.new("UICorner", PSBox).CornerRadius = UDim.new(0, 6)
+
+local PSButton = createBtn("JOIN PRIVATE SERVER", Color3.fromRGB(0, 100, 200), content)
+
+PSButton.MouseButton1Click:Connect(function()
+    local link = PSBox.Text
+    if link ~= "" then
+        SavePSLink(link)
+        local code = link:match("privateServerLinkCode=(%d+)") or link:match("code=(%w+)")
+        if code then
+            PSButton.Text = "TELEPORTING..."
+            local TeleportService = game:GetService("TeleportService")
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, code, LP)
         else
-            statusLbl.Text = "Status: Idle"
+            PSButton.Text = "LINK INVALID!"
+            task.wait(2)
+            PSButton.Text = "JOIN PRIVATE SERVER"
         end
+    else
+        PSButton.Text = "KOSONG!"
+        task.wait(1)
+        PSButton.Text = "JOIN PRIVATE SERVER"
     end
 end)
