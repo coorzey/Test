@@ -1,7 +1,7 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: AUTO LOW-GRAPHIC + MAP RENDERING OPTIMIZED
--- FIX: STABLE DUAL WEBHOOK
+-- UPDATE: STABLE DUAL WEBHOOK + CLOUD OPTIMIZED
+-- FEATURE: PRE-RENDER FULL MAP ON START
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -10,6 +10,7 @@ local Lighting = game:GetService("Lighting")
 local VirtualUser = game:GetService("VirtualUser")
 local PlayerGui = LP:WaitForChild("PlayerGui")   
 local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
 
 -- [NEW] OPTIMIZATION GLOBALS
 local renderingEnabled = true
@@ -25,13 +26,19 @@ task.spawn(function()
     end
 end)
 
--- SUPER ANTI-AFK
-for _, v in pairs(getconnections(LP.Idled)) do v:Disable() end
+-- [REPLACED] SUPER ANTI-AFK
+for _, v in pairs(getconnections(LP.Idled)) do
+    v:Disable()
+end
+
 task.spawn(function()
     while task.wait(20) do
         pcall(function()
             VirtualUser:CaptureController()
             VirtualUser:ClickButton2(Vector2.new())
+            VirtualUser:SetKeyDown("w")
+            task.wait(0.1)
+            VirtualUser:SetKeyUp("w")
         end)
     end
 end)
@@ -40,40 +47,44 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- FUNGSI RENDERING 1 MAP (POTATO MODE)
+-- FUNGSI PRE-RENDER FULL MAP (MENCEGAH MERENDER ULANG SAAT TELEPORT)
+local function preRenderMap(pathData)
+    pcall(function()
+        -- Fokuskan replikasi ke seluruh workspace agar tidak unload
+        LP.ReplicationFocus = Workspace
+        
+        -- Paksa engine meload area koordinat balapan secara instan
+        for i, d in ipairs(pathData) do
+            if i % 5 == 0 or i == #pathData then -- Render tiap 5 titik agar efisien
+                LP.RequestStreamAroundAsync(LP, Vector3.new(d.pos[1], d.pos[2], d.pos[3]))
+            end
+        end
+    end)
+end
+
+-- FUNGSI SUPER LOW GRAPHIC + PURGE
 local function applyDeepClean()
     pcall(function()
-        -- Paksa settingan engine terendah
         settings().Rendering.QualityLevel = 1
-        settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.VeryLow
-        
-        -- Lighting Minimalis
         Lighting.GlobalShadows = false
         Lighting.FogEnd = 9e9
         Lighting.Brightness = 1
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
         
         for _, v in pairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
-                -- TETAP TERENDER: Tapi sangat ringan
+            local name = v.Name:lower()
+            if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") then
+                if not v:IsDescendantOf(LP.Character) then v:Destroy() end
+            elseif v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
                 v.Material = Enum.Material.SmoothPlastic
                 v.Reflectance = 0
                 v.CastShadow = false
-                
-                -- Hapus dekorasi yang menempel di part (Tekstur jalan, dll)
-                for _, child in pairs(v:GetChildren()) do
-                    if child:IsA("Decal") or child:IsA("Texture") then
-                        child:Destroy()
-                    end
-                end
-                
-                -- Hapus objek penghambat FPS
-                local name = v.Name:lower()
-                if name:find("tree") or name:find("leaf") or name:find("grass") or name:find("bush") or name:find("cloud") then
+                if name:find("tree") or name:find("grass") or name:find("bush") or name:find("leaf") then
                     v:Destroy()
                 end
-            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Explosion") or v:IsA("Fire") or v:IsA("Sparkles") then
+            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Sky") or v:IsA("Explosion") then
                 v:Destroy()
+            elseif v:IsA("MeshPart") then
+                v.MeshId = ""
             end
         end
     end)
@@ -85,12 +96,22 @@ local function closePrizePopup()
         for _, gui in pairs(PlayerGui:GetChildren()) do
             if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "DeltaAutoFarm" then
                 for _, btn in pairs(gui:GetDescendants()) do
-                    if (btn:IsA("ImageButton") or btn:IsA("TextButton")) and btn.Visible then
+                    if btn:IsA("ImageButton") or btn:IsA("TextButton") then
                         local n = btn.Name:lower()
-                        if n == "x" or n:find("close") or n:find("exit") then
-                            pcall(function()
-                                for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                            end)
+                        local t = (btn:IsA("TextButton") and btn.Text:lower()) or ""
+                        
+                        if n == "x" or n:find("close") or t == "x" or t:find("close") or n:find("exit") then
+                            if btn.Visible and btn.AbsoluteSize.X > 0 then
+                                local pos = btn.AbsolutePosition
+                                local size = btn.AbsoluteSize
+                                VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
+                                
+                                pcall(function()
+                                    for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in pairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
+                                    for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire() end
+                                end)
+                            end
                         end
                     end
                 end
@@ -170,6 +191,7 @@ end
 local farmBtn = createBtn("START FARMING", clr_btn_off, content)
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, content)
 local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, content)
+local dtStatusLabel = Instance.new("TextLabel", content); dtStatusLabel.Size = UDim2.new(1, 0, 0, 20); dtStatusLabel.Text = "DELAY: 0s"; dtStatusLabel.TextColor3 = Color3.new(0.6,0.6,0.6); dtStatusLabel.BackgroundTransparency = 1; dtStatusLabel.Font = Enum.Font.GothamBold; dtStatusLabel.TextSize = 10
 
 -- MINI HUD
 local miniHud = Instance.new("Frame", sg); miniHud.Size = UDim2.new(0, 130, 0, 65); miniHud.Position = UDim2.new(0, 10, 0.02, 0); miniHud.BackgroundColor3 = Color3.fromRGB(10,10,10); miniHud.Draggable = true; miniHud.Active = true; Instance.new("UICorner", miniHud)
@@ -225,21 +247,26 @@ task.spawn(function()
             if seat and seat:IsA("VehicleSeat") then
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 
+                applyDeepClean()
                 closePrizePopup()
                 
-                -- FORCE STOP BEFORE TELEPORT
+                -- [[ FIX: FORCE STOP BEFORE TELEPORT ]]
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                 car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
-                
+                -- [[ FIX: DOUBLE RESET AFTER TELEPORT ]]
                 task.wait(0.05)
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                 
                 status.Text = "● WAITING RIVAL..."
                 local rivalFound = false
                 repeat 
                     task.wait(1)
-                    if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
+                    if seat then
+                        seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                        seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                    end
                     for _, p in pairs(Players:GetPlayers()) do 
                         if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                             local rHum = p.Character:FindFirstChildOfClass("Humanoid")
@@ -255,7 +282,11 @@ task.spawn(function()
                     for i = 18, 1, -1 do 
                         if not running then break end
                         status.Text = "● START IN: "..i.."s"
-                        if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
+                        -- Force diam selama countdown
+                        if seat then
+                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                            seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                        end
                         task.wait(1) 
                     end
                     
@@ -265,6 +296,7 @@ task.spawn(function()
                             status.Text = "● RACING: " .. i .. "/41"
                             local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
                             seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                            seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                             car:PivotTo(cf)
                             task.wait(0.05)
                             seat.AssemblyLinearVelocity = cf.LookVector * 165
@@ -282,7 +314,10 @@ task.spawn(function()
                             sessionRaces = sessionRaces + 1
                             moneyLabel.Text = "Profit: $" .. totalMoneyEarned
                             raceLabel.Text = "Races: " .. sessionRaces
-                            task.spawn(function() sendWebhook(MAIN_WEBHOOK, gain, totalMoneyEarned, sessionRaces, false) end)
+                            
+                            task.spawn(function()
+                                sendWebhook(MAIN_WEBHOOK, gain, totalMoneyEarned, sessionRaces, false)
+                            end)
                         end
                         task.wait(2)
                     end
@@ -305,11 +340,16 @@ farmBtn.MouseButton1Click:Connect(function()
     if running then
         farmBtn.Text = "STOP FARM"
         farmBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-        -- OTOMATIS RENDERING LOW-POTATO MAP
-        applyDeepClean()
+        
+        -- PROSES PRE-RENDERING SEBELUM JALAN
+        status.Text = "● RENDERING MAP..."
+        preRenderMap(path)
+        status.Text = "● MAP READY!"
+        task.wait(0.5)
     else
         farmBtn.Text = "START FARMING"
         farmBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+        status.Text = "● READY"
     end
 end)
 
@@ -326,3 +366,5 @@ task.spawn(function()
         fpsLabel.Text = "FPS: " .. (renderingEnabled and "Active" or "Reduced")
     end
 end)
+
+game:BindToClose(function() sendWebhook(STATUS_WEBHOOK, 0, totalMoneyEarned, sessionRaces, true) end)
