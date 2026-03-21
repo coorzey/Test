@@ -1,7 +1,7 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
 -- UPDATE: STABLE DUAL WEBHOOK + CLOUD OPTIMIZED
--- FEATURE: PRE-RENDER FULL MAP ON START
+-- FIX: CAR GROUNDING (NO FLOATING)
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -50,12 +50,9 @@ local running, isMinimized = false, false
 -- FUNGSI PRE-RENDER FULL MAP (MENCEGAH MERENDER ULANG SAAT TELEPORT)
 local function preRenderMap(pathData)
     pcall(function()
-        -- Fokuskan replikasi ke seluruh workspace agar tidak unload
         LP.ReplicationFocus = Workspace
-        
-        -- Paksa engine meload area koordinat balapan secara instan
         for i, d in ipairs(pathData) do
-            if i % 5 == 0 or i == #pathData then -- Render tiap 5 titik agar efisien
+            if i % 5 == 0 or i == #pathData then
                 LP.RequestStreamAroundAsync(LP, Vector3.new(d.pos[1], d.pos[2], d.pos[3]))
             end
         end
@@ -250,21 +247,18 @@ task.spawn(function()
                 applyDeepClean()
                 closePrizePopup()
                 
-                -- [[ FIX: FORCE STOP BEFORE TELEPORT ]]
+                -- [[ FIX: NO FLOATING - SET TO GROUND LEVEL ]]
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
-                -- [[ FIX: DOUBLE RESET AFTER TELEPORT ]]
-                task.wait(0.05)
-                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                car:PivotTo(CFrame.new(startPos) * CFrame.Angles(0, math.rad(startRot), 0))
                 
                 status.Text = "● WAITING RIVAL..."
                 local rivalFound = false
                 repeat 
                     task.wait(1)
                     if seat then
-                        seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                        -- Paksa mobil turun ke jalanan (Gravity Force)
+                        seat.AssemblyLinearVelocity = Vector3.new(0,-10,0) 
                         seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                     end
                     for _, p in pairs(Players:GetPlayers()) do 
@@ -282,9 +276,9 @@ task.spawn(function()
                     for i = 18, 1, -1 do 
                         if not running then break end
                         status.Text = "● START IN: "..i.."s"
-                        -- Force diam selama countdown
                         if seat then
-                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                            -- Tetap diam tapi menempel tanah
+                            seat.AssemblyLinearVelocity = Vector3.new(0,-5,0)
                             seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                         end
                         task.wait(1) 
@@ -340,8 +334,6 @@ farmBtn.MouseButton1Click:Connect(function()
     if running then
         farmBtn.Text = "STOP FARM"
         farmBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-        
-        -- PROSES PRE-RENDERING SEBELUM JALAN
         status.Text = "● RENDERING MAP..."
         preRenderMap(path)
         status.Text = "● MAP READY!"
