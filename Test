@@ -316,7 +316,7 @@ end)
 toggleBtn.MouseButton1Click:Connect(function()   
     isMinimized = not isMinimized
     content.Visible = not isMinimized
-    frame:TweenSize(isMinimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 245), "Out", "Quad", 0.3, true)
+    frame:TweenSize(isMinimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 155), "Out", "Quad", 0.3, true)
     toggleBtn.Text = isMinimized and "+" or "−"
 end)
 
@@ -341,62 +341,3 @@ task.spawn(function()
 end)
 
 game:BindToClose(function() sendWebhook(STATUS_WEBHOOK, 0, totalMoneyEarned, sessionRaces, true) end)
-
--- // ========================================== //
--- // FITUR BARU: PS JOINER DENGAN AUTO-SAVE     //
--- // ========================================== //
-
-local FileName = "CorrzeyHub_PS_Config.json"
-
-local function SavePSLink(link)
-    pcall(function() writefile(FileName, HttpService:JSONEncode({PS_Link = link})) end)
-end
-
-local function LoadPSLink()
-    if isfile(FileName) then
-        local s, data = pcall(function() return HttpService:JSONDecode(readfile(FileName)) end)
-        if s and data then return data.PS_Link end
-    end
-    return ""
-end
-
-local PSBox = Instance.new("TextBox", content)
-PSBox.Name = "PS_Input"
-PSBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-PSBox.Size = UDim2.new(1, 0, 0, 30)
-PSBox.Font = Enum.Font.GothamSemibold
-PSBox.PlaceholderText = "Paste Link PS..."
-PSBox.Text = LoadPSLink()
-PSBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-PSBox.TextSize = 10
-Instance.new("UICorner", PSBox).CornerRadius = UDim.new(0, 6)
-
-local PSButton = createBtn("JOIN PRIVATE SERVER", Color3.fromRGB(0, 100, 200), content)
-
-PSButton.MouseButton1Click:Connect(function()
-    local link = PSBox.Text
-    if link ~= "" then
-        SavePSLink(link)
-        local code = link:match("privateServerLinkCode=(%d+)") or link:match("code=(%w+)") or link:match("shareCode=(%w+)")
-        
-        if code then
-            PSButton.Text = "TELEPORTING..."
-            local success, err = pcall(function()
-                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, code, LP)
-            end)
-            if not success then
-                PSButton.Text = "SERVER ERROR"
-                task.wait(2)
-                PSButton.Text = "JOIN PRIVATE SERVER"
-            end
-        else
-            PSButton.Text = "LINK INVALID!"
-            task.wait(2)
-            PSButton.Text = "JOIN PRIVATE SERVER"
-        end
-    else
-        PSButton.Text = "KOSONG!"
-        task.wait(1)
-        PSButton.Text = "JOIN PRIVATE SERVER"
-    end
-end)
