@@ -1,7 +1,7 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
 -- UPDATE: STABLE DUAL WEBHOOK + CLOUD OPTIMIZED
--- FIX: ANCHOR-LIKE POSITIONING (NO SLIDING)
+-- FIX: AUTO LOW-GRAPHIC ON START
 -- ==========================================  
 local Players = game:GetService("Players")   
 local LP = Players.LocalPlayer   
@@ -47,7 +47,7 @@ local totalMoneyEarned, sessionRaces = 0, 0
 local moneyBeforeRace = 0
 local running, isMinimized = false, false
 
--- FUNGSI SUPER LOW GRAPHIC + PURGE
+-- FUNGSI SUPER LOW GRAPHIC + PURGE (TETAP TERENDER)
 local function applyDeepClean()
     pcall(function()
         settings().Rendering.QualityLevel = 1
@@ -57,19 +57,21 @@ local function applyDeepClean()
         
         for _, v in pairs(Workspace:GetDescendants()) do
             local name = v.Name:lower()
-            if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("car_") then
+            -- Hapus objek yang benar-benar tidak perlu (Lalu lintas, NPC, Dekorasi kecil)
+            if name:find("traffic") or name:find("npc") or name:find("bot") or name:find("tree") or name:find("grass") or name:find("bush") then
                 if not v:IsDescendantOf(LP.Character) then v:Destroy() end
             elseif v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
+                -- TETAP TERENDER: Ubah material jadi plastik agar ringan
                 v.Material = Enum.Material.SmoothPlastic
                 v.Reflectance = 0
                 v.CastShadow = false
-                if name:find("tree") or name:find("grass") or name:find("bush") or name:find("leaf") then
-                    v:Destroy()
-                end
             elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Sky") or v:IsA("Explosion") then
+                -- HAPUS: Efek visual yang membebani GPU
                 v:Destroy()
             elseif v:IsA("MeshPart") then
-                v.MeshId = ""
+                -- OPTIMASI MESH: Turunkan detail fidelity
+                v.RenderFidelity = Enum.RenderFidelity.Performance
+                v.CollisionFidelity = Enum.CollisionFidelity.Box
             end
         end
     end)
@@ -232,6 +234,7 @@ task.spawn(function()
             if seat and seat:IsA("VehicleSeat") then
                 local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
                 
+                -- Optimization dipanggil berkala saat farm aktif
                 applyDeepClean()
                 closePrizePopup()
                 
@@ -267,7 +270,6 @@ task.spawn(function()
                     for i = 18, 1, -1 do 
                         if not running then break end
                         status.Text = "● START IN: "..i.."s"
-                        -- Force diam selama countdown
                         if seat then
                             seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                             seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
@@ -322,8 +324,15 @@ end)
 
 farmBtn.MouseButton1Click:Connect(function()
     running = not running
-    farmBtn.Text = running and "STOP FARM" or "START FARMING"
-    farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
+    if running then
+        farmBtn.Text = "STOP FARM"
+        farmBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+        -- OTOMATIS BERSIHKAN MAP SAAT START
+        applyDeepClean()
+    else
+        farmBtn.Text = "START FARMING"
+        farmBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    end
 end)
 
 cpuBtn.MouseButton1Click:Connect(function()
