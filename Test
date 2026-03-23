@@ -1,6 +1,6 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - MIDNIGHT CHASERS EDITION
--- INTEGRATED: ROAD-ONLY FAST RENDERER
+-- INTEGRATED: ROAD-ONLY FAST RENDERER + % + LOADING BAR
 -- ==========================================  
 local Players = game:GetService("Players")    
 local LP = Players.LocalPlayer    
@@ -19,10 +19,10 @@ local function toggle3DRender(mode)
     RunService:Set3dRenderingEnabled(mode)
 end
 
--- [FUNGSI RENDER KHUSUS JALAN - ROAD ONLY]
+-- [FUNGSI RENDER KHUSUS JALAN + PROGRESS BAR]
 local function startRoadRender()
-    local RENDER_RADIUS = 250 -- Radius lebih luas agar jalan di depan sudah siap
-    local ASSETS_PER_WAIT = 400 -- Sangat cepat karena hanya memfilter jalan
+    local RENDER_RADIUS = 250 
+    local ASSETS_PER_WAIT = 350 
     
     local character = LP.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -39,18 +39,36 @@ local function startRoadRender()
     bg.BorderSizePixel = 0
 
     local label = Instance.new("TextLabel", bg)
-    label.Size = UDim2.fromScale(1, 1)
+    label.Size = UDim2.new(1, 0, 0, 50)
+    label.Position = UDim2.new(0, 0, 0.45, -60)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamBlack
-    label.TextSize = 30
+    label.TextSize = 28
     label.TextColor3 = Color3.new(1,1,1)
-    label.Text = "CORRZEY HUB\nPRE-RENDERING ROADS..."
+    label.Text = "CORRZEY HUB\nSCANNING MAP ASSETS..."
 
+    -- [NEW] LOADING BAR UI
+    local barContainer = Instance.new("Frame", bg)
+    barContainer.Size = UDim2.new(0, 300, 0, 10)
+    barContainer.Position = UDim2.new(0.5, -150, 0.5, 20)
+    barContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    barContainer.BorderSizePixel = 0
+    Instance.new("UICorner", barContainer).CornerRadius = UDim.new(1, 0)
+
+    local barFill = Instance.new("Frame", barContainer)
+    barFill.Size = UDim2.new(0, 0, 1, 0)
+    barFill.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    barFill.BorderSizePixel = 0
+    Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
+
+    -- RGB Effect on Title & Bar
     task.spawn(function()
         local h = 0
         while renderGui.Parent do
             h = h + (1/200)
-            label.TextColor3 = Color3.fromHSV(h % 1, 0.8, 1)
+            local col = Color3.fromHSV(h % 1, 0.8, 1)
+            label.TextColor3 = col
+            barFill.BackgroundColor3 = col
             task.wait()
         end
     end)
@@ -59,10 +77,10 @@ local function startRoadRender()
         local assets = {}
         local charPos = rootPart.Position
         
+        -- Scanning Phase
         for _, v in ipairs(Workspace:GetDescendants()) do
             if v:IsA("BasePart") then
                 local name = v.Name:lower()
-                -- Filter khusus Jalan (Road, Street, Asphalt, Highway, Track)
                 if name:find("road") or name:find("street") or name:find("asphalt") or name:find("track") or name:find("way") then
                     if (v.Position - charPos).Magnitude <= RENDER_RADIUS then
                         table.insert(assets, v)
@@ -71,19 +89,33 @@ local function startRoadRender()
             end
         end
 
-        if #assets > 0 then
+        local total = #assets
+        if total > 0 then
+            -- Rendering Phase
             for i, v in ipairs(assets) do
                 ContentProvider:PreloadAsync({v})
+                
+                if i % 5 == 0 or i == total then
+                    local ratio = i / total
+                    local percent = math.floor(ratio * 100)
+                    label.Text = "CORRZEY HUB\nRENDERING ROADS: " .. percent .. "%"
+                    -- Animasi bar smooth
+                    TweenService:Create(barFill, TweenInfo.new(0.1), {Size = UDim2.fromScale(ratio, 1)}):Play()
+                end
+                
                 if i % ASSETS_PER_WAIT == 0 then task.wait() end
             end
-            label.Text = "ROADS RENDERED!"
+            label.Text = "RENDER COMPLETE! (100%)"
         else
             label.Text = "NO ROADS DETECTED IN RADIUS"
         end
         
-        task.wait(0.5)
+        task.wait(0.8)
         local tw = TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-        TweenService:Create(label, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+        for _, v in pairs(bg:GetDescendants()) do
+            if v:IsA("Frame") then TweenService:Create(v, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play() end
+            if v:IsA("TextLabel") then TweenService:Create(v, TweenInfo.new(0.5), {TextTransparency = 1}):Play() end
+        end
         tw:Play()
         tw.Completed:Connect(function() renderGui:Destroy() end)
     end)
@@ -247,7 +279,7 @@ local function createBtn(txt, color, parent)
 end
 
 local farmBtn = createBtn("START FARMING", clr_btn_off, content)
-local roadBtn = createBtn("RENDER ROAD ONLY", Color3.fromRGB(0, 170, 255), content) -- [ADDED] Tombol baru
+local roadBtn = createBtn("RENDER ROAD ONLY", Color3.fromRGB(0, 170, 255), content) 
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, content)
 local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, content)
 local dtStatusLabel = Instance.new("TextLabel", content); dtStatusLabel.Size = UDim2.new(1, 0, 0, 20); dtStatusLabel.Text = "DELAY: 0s"; dtStatusLabel.TextColor3 = Color3.new(0.6,0.6,0.6); dtStatusLabel.BackgroundTransparency = 1; dtStatusLabel.Font = Enum.Font.GothamBold; dtStatusLabel.TextSize = 10
@@ -309,11 +341,9 @@ task.spawn(function()
                 applyDeepClean()
                 closePrizePopup()
                 
-                -- [[ FIX: FORCE STOP BEFORE TELEPORT ]]
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
                 car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
-                -- [[ FIX: DOUBLE RESET AFTER TELEPORT ]]
                 task.wait(0.05)
                 seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                 seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
@@ -341,7 +371,6 @@ task.spawn(function()
                     for i = 18, 1, -1 do 
                         if not running then break end
                         status.Text = "● START IN: "..i.."s"
-                        -- Force diam selama countdown
                         if seat then
                             seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
                             seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
@@ -400,7 +429,6 @@ farmBtn.MouseButton1Click:Connect(function()
     farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
 end)
 
--- [ADDED] Logic Tombol Road Render
 roadBtn.MouseButton1Click:Connect(function()
     startRoadRender()
 end)
