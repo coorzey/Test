@@ -1,6 +1,6 @@
 -- ==========================================  
--- V58.6 FINAL REBORN - MC EDITION (ULTRA RENDER)
--- FIX: PRE-RENDER ENTIRE TELEPORT PATH (NO POPPING)
+-- V58.6 FINAL REBORN - MC EDITION (GLOBAL RENDER)
+-- FIX: FULL MAP ROAD PRE-RENDER (STOP GAME PAUSED)
 -- ==========================================  
 local Players = game:GetService("Players")    
 local LP = Players.LocalPlayer    
@@ -12,34 +12,6 @@ local RunService = game:GetService("RunService")
 local ContentProvider = game:GetService("ContentProvider") 
 local TweenService = game:GetService("TweenService")
 
--- KOORDINAT ASLI (PATH 1-41) - DIPINDAH KE ATAS UNTUK RENDERER
-local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
-local startRot = -95.3   
-local path = {   
-    {pos = {3353.99, -15.28, 883.01}, rot = 68.97}, {pos = {3048.26, -15.26, 680.38}, rot = 68.89},
-    {pos = {2739.67, -15.11, 570.12}, rot = 70.95}, {pos = {2271.23, -1.68, 411.61}, rot = 73.02},
-    {pos = {1946.53, 14.22, 306.79}, rot = 71.72}, {pos = {1570.71, 20.61, 186.11}, rot = 74.46},
-    {pos = {1033.94, 20.61, 92.19}, rot = 87.54}, {pos = {688.36, 20.60, 85.04}, rot = 92.30},
-    {pos = {-24.31, 20.63, 84.78}, rot = 90.45}, {pos = {-583.41, 20.61, 88.00}, rot = 90.43},
-    {pos = {-1247.06, 16.11, 121.99}, rot = 101.03}, {pos = {-1910.41, -11.95, 276.76}, rot = 103.87},
-    {pos = {-2580.79, -8.75, 417.36}, rot = 101.97}, {pos = {-3175.10, 18.31, 542.23}, rot = 101.76},
-    {pos = {-3916.48, 23.47, 701.48}, rot = 101.44}, {pos = {-4630.57, 31.07, 839.62}, rot = 102.08},
-    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, 
-    {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, 
-    {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, 
-    {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, 
-    {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, 
-    {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, 
-    {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, 
-    {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, 
-    {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, 
-    {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, 
-    {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, 
-    {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, 
-    {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, 
-    {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
-}
-
 -- [NEW] OPTIMIZATION GLOBALS
 local renderingEnabled = true
 local function toggle3DRender(mode)
@@ -47,18 +19,12 @@ local function toggle3DRender(mode)
     RunService:Set3dRenderingEnabled(mode)
 end
 
--- [FUNGSI RENDER TOTAL JALUR TELEPORT (FIX POPPING)]
-local function startTotalPathRender()
-    -- Radius 250 di sekitar setiap titik path untuk memastikan seluruh lebar jalan ter-render
-    local PATH_RADIUS = 250 
-    local ASSETS_PER_WAIT = 500 -- Sangat cepat, hanya jalan
+-- [FUNGSI RENDER SELURUH JALAN DI MAP - FIX GAME PAUSED]
+local function startGlobalMapRender()
+    local ASSETS_PER_WAIT = 600 -- Batch besar untuk kecepatan maksimal
     
-    local character = LP.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-
     local renderGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    renderGui.Name = "CorrZeyTotalRender"
+    renderGui.Name = "CorrZeyGlobalRender"
     renderGui.IgnoreGuiInset = true
     renderGui.DisplayOrder = 1000
 
@@ -72,14 +38,14 @@ local function startTotalPathRender()
     label.Position = UDim2.new(0, 0, 0.45, -60)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamBlack
-    label.TextSize = 25
+    label.TextSize = 24
     label.TextColor3 = Color3.new(1,1,1)
-    label.Text = "CORRZEY HUB\nMAP: SCANNING TOTAL RACE PATH..."
+    label.Text = "CORRZEY HUB\nPRE-RENDERING FULL MAP ROADS..."
 
     local barContainer = Instance.new("Frame", bg)
-    barContainer.Size = UDim2.new(0, 300, 0, 10)
-    barContainer.Position = UDim2.new(0.5, -150, 0.5, 20)
-    barContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    barContainer.Size = UDim2.new(0, 320, 0, 12)
+    barContainer.Position = UDim2.new(0.5, -160, 0.5, 25)
+    barContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     barContainer.BorderSizePixel = 0
     Instance.new("UICorner", barContainer).CornerRadius = UDim.new(1, 0)
 
@@ -88,12 +54,12 @@ local function startTotalPathRender()
     barFill.BorderSizePixel = 0
     Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
 
-    -- RGB Effect Sync
+    -- RGB Sync Effect
     task.spawn(function()
         local h = 0
         while renderGui.Parent do
-            h = h + (1/250)
-            local col = Color3.fromHSV(h % 1, 0.8, 1)
+            h = h + (1/300)
+            local col = Color3.fromHSV(h % 1, 0.7, 1)
             label.TextColor3 = col
             barFill.BackgroundColor3 = col
             task.wait()
@@ -101,75 +67,50 @@ local function startTotalPathRender()
     end)
 
     task.spawn(function()
-        local assetsToPreload = {}
+        local roads = {}
         
-        -- Kumpulkan semua objek bertipe BasePart di Workspace
-        local allBaseParts = {}
+        -- Scanning Phase: Ambil SEMUA jalan tanpa filter jarak
         for _, v in ipairs(Workspace:GetDescendants()) do
             if v:IsA("BasePart") then
-                table.insert(allBaseParts, v)
-            end
-        end
-
-        -- [NEW] Logika Pencarian Jalan Berdasarkan Seluruh Path
-        -- Bandingkan setiap BasePart dengan 41 titik koordinat Path
-        for _, part in ipairs(allBaseParts) do
-            local name = part.Name:lower()
-            if name:find("road") or name:find("street") or name:find("asphalt") or name:find("track") or name:find("way") then
-                local partPos = part.Position
-                local isNearPath = false
-                
-                -- Cek apakah objek jalan dekat dengan salah satu titik path balapan
-                for _, point in ipairs(path) do
-                    -- Gunakan titik path [1], [2], [3] dari array koordinat aslimu
-                    local pointVector = Vector3.new(point.pos[1], point.pos[2], point.pos[3])
-                    if (partPos - pointVector).Magnitude <= PATH_RADIUS then
-                        isNearPath = true
-                        break -- Jika sudah dekat satu titik, abaikan titik lainnya
-                    end
-                end
-                
-                if isNearPath then
-                    table.insert(assetsToPreload, part)
+                local name = v.Name:lower()
+                if name:find("road") or name:find("street") or name:find("asphalt") or name:find("track") or name:find("way") or name:find("highway") then
+                    table.insert(roads, v)
                 end
             end
         end
-        -- Hapus tabel besar untuk menghemat memori
-        allBaseParts = nil 
 
-        local total = #assetsToPreload
+        local total = #roads
         if total > 0 then
-            label.Text = "CORRZEY HUB\nMAP: RENDERING TOTAL PATH..."
-            -- Rendering Phase
-            for i, v in ipairs(assetsToPreload) do
+            for i, v in ipairs(roads) do
+                -- PreloadAsync memaksa engine Roblox mendownload & merender objek ke RAM
                 ContentProvider:PreloadAsync({v})
                 
-                if i % 10 == 0 or i == total then
+                if i % 15 == 0 or i == total then
                     local ratio = i / total
                     local percent = math.floor(ratio * 100)
-                    label.Text = "CORRZEY HUB\nMAP: RENDERING PATH (" .. percent .. "%)"
-                    TweenService:Create(barFill, TweenInfo.new(0.08), {Size = UDim2.fromScale(ratio, 1)}):Play()
+                    label.Text = "CORRZEY HUB\nGLOBAL ROAD RENDER: " .. percent .. "%"
+                    TweenService:Create(barFill, TweenInfo.new(0.05), {Size = UDim2.fromScale(ratio, 1)}):Play()
                 end
                 
                 if i % ASSETS_PER_WAIT == 0 then task.wait() end
             end
-            label.Text = "ULTRA RENDER COMPLETE! (NO POPPING)"
+            label.Text = "GLOBAL RENDER SUCCESS!\nTELEPORT PAUSE FIXED"
         else
-            label.Text = "NO ROADS DETECTED ON PATH"
+            label.Text = "NO ROAD ASSETS FOUND IN WORKSPACE"
         end
         
-        task.wait(1.2)
-        local tw = TweenService:Create(bg, TweenInfo.new(0.6), {BackgroundTransparency = 1})
+        task.wait(1.5)
+        local tw = TweenService:Create(bg, TweenInfo.new(0.7), {BackgroundTransparency = 1})
         for _, v in pairs(bg:GetDescendants()) do
-            if v:IsA("Frame") then TweenService:Create(v, TweenInfo.new(0.6), {BackgroundTransparency = 1}):Play() end
-            if v:IsA("TextLabel") then TweenService:Create(v, TweenInfo.new(0.6), {TextTransparency = 1}):Play() end
+            if v:IsA("Frame") then TweenService:Create(v, TweenInfo.new(0.7), {BackgroundTransparency = 1}):Play() end
+            if v:IsA("TextLabel") then TweenService:Create(v, TweenInfo.new(0.7), {TextTransparency = 1}):Play() end
         end
         tw:Play()
         tw.Completed:Connect(function() renderGui:Destroy() end)
     end)
 end
 
--- [REMAINDER OF ORIGINAL SCRIPT - NO CHANGES BELOW]
+-- [REMAINDER OF ORIGINAL SCRIPT - TIDAK ADA PERUBAHAN DI BAWAH INI]
 
 -- [NEW] AUTO MEMORY CLEANER
 task.spawn(function()
@@ -247,7 +188,6 @@ local function closePrizePopup()
                                     for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
                                     for _, conn in pairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
                                     for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire() end
-                                
                                 end)
                             end
                         end
@@ -266,6 +206,34 @@ local function getPlayerMoney()
     end   
     return 0   
 end   
+
+-- KOORDINAT (PATH 1-41)
+local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
+local startRot = -95.3   
+local path = {   
+    {pos = {3353.99, -15.28, 883.01}, rot = 68.97}, {pos = {3048.26, -15.26, 680.38}, rot = 68.89},
+    {pos = {2739.67, -15.11, 570.12}, rot = 70.95}, {pos = {2271.23, -1.68, 411.61}, rot = 73.02},
+    {pos = {1946.53, 14.22, 306.79}, rot = 71.72}, {pos = {1570.71, 20.61, 186.11}, rot = 74.46},
+    {pos = {1033.94, 20.61, 92.19}, rot = 87.54}, {pos = {688.36, 20.60, 85.04}, rot = 92.30},
+    {pos = {-24.31, 20.63, 84.78}, rot = 90.45}, {pos = {-583.41, 20.61, 88.00}, rot = 90.43},
+    {pos = {-1247.06, 16.11, 121.99}, rot = 101.03}, {pos = {-1910.41, -11.95, 276.76}, rot = 103.87},
+    {pos = {-2580.79, -8.75, 417.36}, rot = 101.97}, {pos = {-3175.10, 18.31, 542.23}, rot = 101.76},
+    {pos = {-3916.48, 23.47, 701.48}, rot = 101.44}, {pos = {-4630.57, 31.07, 839.62}, rot = 102.08},
+    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, 
+    {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, 
+    {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, 
+    {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, 
+    {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, 
+    {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, 
+    {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, 
+    {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, 
+    {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, 
+    {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, 
+    {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, 
+    {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, 
+    {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, 
+    {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
+}
 
 -- [[ UI SYSTEM ]]
 if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
@@ -300,7 +268,7 @@ local function createBtn(txt, color, parent)
 end
 
 local farmBtn = createBtn("START FARMING", clr_btn_off, content)
-local totalRenderBtn = createBtn("ULTRA RENDER PATH (NO LAG)", Color3.fromRGB(200, 0, 200), content) -- [ADDED] Tombol baru
+local roadBtn = createBtn("ULTRA FULL MAP RENDER", Color3.fromRGB(0, 150, 0), content) 
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, content)
 local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, content)
 local dtStatusLabel = Instance.new("TextLabel", content); dtStatusLabel.Size = UDim2.new(1, 0, 0, 20); dtStatusLabel.Text = "DELAY: 0s"; dtStatusLabel.TextColor3 = Color3.new(0.6,0.6,0.6); dtStatusLabel.BackgroundTransparency = 1; dtStatusLabel.Font = Enum.Font.GothamBold; dtStatusLabel.TextSize = 10
@@ -440,7 +408,6 @@ end)
 toggleBtn.MouseButton1Click:Connect(function()   
     isMinimized = not isMinimized
     content.Visible = not isMinimized
-    -- Perubahan tinggi frame karena penambahan tombol baru
     frame:TweenSize(isMinimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 190), "Out", "Quad", 0.3, true)
     toggleBtn.Text = isMinimized and "+" or "−"
 end)
@@ -451,9 +418,8 @@ farmBtn.MouseButton1Click:Connect(function()
     farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
 end)
 
--- [ADDED] Logic Tombol Ultra Render Path
-totalRenderBtn.MouseButton1Click:Connect(function()
-    startTotalPathRender()
+roadBtn.MouseButton1Click:Connect(function()
+    startGlobalMapRender()
 end)
 
 cpuBtn.MouseButton1Click:Connect(function()
