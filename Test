@@ -1,40 +1,91 @@
--- Full Rendering & Map Loader Script
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+-- ==========================================
+-- ULTIMATE FPS BOOSTER & MAP DESTROYER 2026
+-- ==========================================
+
 local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 
-local function ForceRender()
-    -- 1. Menghilangkan Batas Pandang (Fog/Kabut)
-    Lighting.FogEnd = 100000 -- Jarak pandang maksimal
-    Lighting.FogStart = 0
-    Lighting.GlobalShadows = true -- Opsional: Aktifkan jika ingin visual tetap bagus
-    
-    -- 2. Memaksa Rendering pada Level Tertinggi
-    if settings().Rendering then
-        settings().Rendering.QualityLevel = Enum.QualityLevel.Level21 -- Set ke Ultra
-    end
+-- 1. FPS UNLOCKER & PERFORMANCE SETTINGS
+-- Mencoba mematikan batasan frame rate jika executor mendukung
+if setfpscap then
+    setfpscap(999) 
+end
 
-    -- 3. Bypass StreamingEnabled (Looping melalui semua part)
-    -- Ini memaksa engine untuk memuat properti visual part tersebut
-    for _, v in pairs(game.Workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.CastShadow = true -- Memaksa engine menghitung cahaya pada objek ini
-            if v:IsA("MeshPart") or v:IsA("SpecialMesh") then
-                -- Memaksa pemuatan tekstur mesh
-                local temp = v.Parent
-            end
+settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
+
+-- 2. KONFIGURASI PENGHAPUSAN
+local TARGET_NAMES = {
+    "tree", "leaf", "bush", "grass", "flower", "cloud", "building", 
+    "rock", "stone", "decor", "water", "prop", "fence", "bench", 
+    "particle", "smoke", "fire", "sparkle", "dust", "atmosphere"
+}
+
+-- 3. FUNGSI OPTIMASI AGRESIF (HAPUS TOTAL)
+local function ultraOptimize(obj)
+    -- Cek nama objek berdasarkan daftar target
+    local isTrash = false
+    for _, name in pairs(TARGET_NAMES) do
+        if obj.Name:lower():find(name) then
+            isTrash = true
+            break
         end
     end
 
-    -- 4. Memaksa Focus Camera ke seluruh area (Singkat)
-    -- Ini memberitahu server bahwa player "melihat" segalanya
-    local player = Players.LocalPlayer
-    if player then
-        player.ReplicationFocus = game.Workspace
+    if isTrash then
+        obj:Destroy()
+    elseif obj:IsA("BasePart") or obj:IsA("MeshPart") then
+        -- Objek yang tersisa dibuat se-ringan mungkin
+        obj.Material = Enum.Material.Plastic
+        obj.Reflectance = 0
+        obj.CastShadow = false
+        if obj:IsA("MeshPart") then
+            obj.RenderFidelity = Enum.RenderFidelity.Precise
+        end
+    elseif obj:IsA("Decal") or obj:IsA("Texture") or obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+        obj:Destroy()
+    elseif obj:IsA("PostEffect") or obj:IsA("BloomEffect") or obj:IsA("BlurEffect") or obj:IsA("SunRaysEffect") then
+        obj:Destroy()
     end
 end
 
--- Menjalankan fungsi
-task.spawn(ForceRender)
+-- 4. FULL BRIGHT (Agar tidak gelap setelah lampu dihapus)
+local function activateFullBright()
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 14
+    Lighting.FogEnd = 100000
+    Lighting.GlobalShadows = false
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    
+    -- Memaksa cahaya tetap terang setiap saat
+    Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+        Lighting.ClockTime = 14
+    end)
+end
 
-print("Full Map Rendering Attempted. Harap tunggu beberapa saat agar aset termuat.")
+-- 5. EKSEKUSI MASSAL (Satu Map Full)
+print("Memulai pembersihan total...")
+
+for _, v in pairs(Workspace:GetDescendants()) do
+    pcall(function() ultraOptimize(v) end)
+end
+
+-- Menghapus objek baru yang muncul (StreamingEnabled)
+Workspace.DescendantAdded:Connect(function(v)
+    pcall(function() ultraOptimize(v) end)
+end)
+
+-- Mengoptimalkan Terrain Air jika ada
+if Workspace:FindFirstChildOfClass("Terrain") then
+    local t = Workspace.Terrain
+    t.WaterWaveSize = 0
+    t.WaterWaveSpeed = 0
+    t.WaterReflectance = 0
+    t.WaterTransparency = 0
+    -- Menghilangkan rumput 3D bawaan Roblox
+    pcall(function() sethiddenproperty(t, "Decoration", false) end)
+end
+
+activateFullBright()
+print("Selesai! Map telah digunduli dan FPS telah di-unlock.")
