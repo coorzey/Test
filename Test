@@ -1,304 +1,136 @@
--- ==========================================  
--- V58.9 ULTIMATE FULL VERSION - OMEGA RENDER
--- FIX: TOTAL MAP LOAD + FULL AUTO FARM LOGIC
--- ==========================================  
-local Players = game:GetService("Players")    
-local LP = Players.LocalPlayer    
-local Workspace = game:GetService("Workspace")    
-local Lighting = game:GetService("Lighting")    
-local VirtualUser = game:GetService("VirtualUser")
-local PlayerGui = LP:WaitForChild("PlayerGui")    
-local RunService = game:GetService("RunService")
-local ContentProvider = game:GetService("ContentProvider") 
+--[ CONFIGURATION ]--
+local RENDER_RADIUS = 200 -- Hanya render objek dalam radius 200 studs (Cukup untuk satu area besar)
+local ASSETS_PER_WAIT = 200 -- Lebih banyak aset per batch agar lebih cepat
+
+--[ SERVICES ]--
+local ContentProvider = game:GetService("ContentProvider")
 local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
--- [[ SETTINGS & GLOBALS ]]
-local totalMoneyEarned, sessionRaces = 0, 0
-local moneyBeforeRace = 0
-local running, isMinimized = false, false
-local renderingEnabled = true
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
 
--- WEBHOOK CONFIG
-local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
-local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
-local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
+--[ UI CLEANUP ]--
+if CoreGui:FindFirstChild("CorrZeyRenderer") then CoreGui:FindFirstChild("CorrZeyRenderer"):Destroy() end
 
--- [[ DATA KOORDINAT PATH 1-41 ]]
-local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
-local startRot = -95.3   
-local path = {   
-    {pos = {3353.99, -15.28, 883.01}, rot = 68.97}, {pos = {3048.26, -15.26, 680.38}, rot = 68.89},
-    {pos = {2739.67, -15.11, 570.12}, rot = 70.95}, {pos = {2271.23, -1.68, 411.61}, rot = 73.02},
-    {pos = {1946.53, 14.22, 306.79}, rot = 71.72}, {pos = {1570.71, 20.61, 186.11}, rot = 74.46},
-    {pos = {1033.94, 20.61, 92.19}, rot = 87.54}, {pos = {688.36, 20.60, 85.04}, rot = 92.30},
-    {pos = {-24.31, 20.63, 84.78}, rot = 90.45}, {pos = {-583.41, 20.61, 88.00}, rot = 90.43},
-    {pos = {-1247.06, 16.11, 121.99}, rot = 101.03}, {pos = {-1910.41, -11.95, 276.76}, rot = 103.87},
-    {pos = {-2580.79, -8.75, 417.36}, rot = 101.97}, {pos = {-3175.10, 18.31, 542.23}, rot = 101.76},
-    {pos = {-3916.48, 23.47, 701.48}, rot = 101.44}, {pos = {-4630.57, 31.07, 839.62}, rot = 102.08},
-    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, 
-    {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, 
-    {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, 
-    {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, 
-    {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, 
-    {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, 
-    {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, 
-    {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, 
-    {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, 
-    {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, 
-    {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, 
-    {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, 
-    {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, 
-    {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
-}
+--[ UI DESIGN ]--
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CorrZeyRenderer"
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = CoreGui
 
--- [[ OMEGA RENDER ENGINE (FULL MAP LOAD) ]]
-local function startOmegaWorldRender()
-    local BATCH_SIZE = 1000 
-    local renderGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    renderGui.Name = "CorrZeyOmegaRender"
-    renderGui.IgnoreGuiInset = true
-    renderGui.DisplayOrder = 99999
+local background = Instance.new("Frame")
+background.Size = UDim2.fromScale(1, 1)
+background.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+background.Parent = screenGui
 
-    local bg = Instance.new("Frame", renderGui)
-    bg.Size = UDim2.fromScale(1, 1)
-    bg.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
-    bg.BorderSizePixel = 0
+local centerFrame = Instance.new("Frame")
+centerFrame.Size = UDim2.fromOffset(400, 150)
+centerFrame.Position = UDim2.fromScale(0.5, 0.5)
+centerFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+centerFrame.BackgroundTransparency = 1
+centerFrame.Parent = background
 
-    local label = Instance.new("TextLabel", bg)
-    label.Size = UDim2.new(1, 0, 0, 60); label.Position = UDim2.new(0, 0, 0.4, 0); label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBlack; label.TextSize = 26; label.TextColor3 = Color3.new(1,1,1)
-    label.Text = "CORRZEY HUB: SCANNING WORLD..."
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Text = "CORRZEY HUB"
+titleLabel.Size = UDim2.fromScale(1, 0.4)
+titleLabel.Font = Enum.Font.GothamBlack
+titleLabel.TextSize = 40
+titleLabel.BackgroundTransparency = 1
+titleLabel.Parent = centerFrame
 
-    local subLabel = Instance.new("TextLabel", bg)
-    subLabel.Size = UDim2.new(1, 0, 0, 30); subLabel.Position = UDim2.new(0, 0, 0.4, 60); subLabel.BackgroundTransparency = 1
-    subLabel.Font = Enum.Font.GothamBold; subLabel.TextSize = 14; subLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    subLabel.Text = "Wait, collecting every single asset in map..."
+local timeLabel = Instance.new("TextLabel")
+timeLabel.Size = UDim2.fromScale(1, 0.2)
+timeLabel.Position = UDim2.fromScale(0.5, 0.5)
+timeLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+timeLabel.Font = Enum.Font.GothamBold
+timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+timeLabel.TextSize = 16
+timeLabel.Text = "Fast Scanning..."
+timeLabel.BackgroundTransparency = 1
+timeLabel.Parent = centerFrame
 
-    local barContainer = Instance.new("Frame", bg)
-    barContainer.Size = UDim2.new(0, 400, 0, 12); barContainer.Position = UDim2.new(0.5, -200, 0.5, 40); barContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Instance.new("UICorner", barContainer)
+local barContainer = Instance.new("Frame")
+barContainer.Size = UDim2.new(0.7, 0, 0, 4)
+barContainer.Position = UDim2.fromScale(0.5, 0.7)
+barContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+barContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+barContainer.BorderSizePixel = 0
+barContainer.Parent = centerFrame
 
-    local barFill = Instance.new("Frame", barContainer)
-    barFill.Size = UDim2.new(0, 0, 1, 0); barFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Instance.new("UICorner", barFill)
+local barFill = Instance.new("Frame")
+barFill.Size = UDim2.fromScale(0, 1)
+barFill.BorderSizePixel = 0
+barFill.Parent = barContainer
 
-    task.spawn(function()
-        local h = 0
-        while renderGui.Parent do
-            h = h + (1/400)
-            local col = Color3.fromHSV(h % 1, 0.8, 1)
-            label.TextColor3 = col
-            barFill.BackgroundColor3 = col
-            task.wait()
-        end
-    end)
-
-    task.spawn(function()
-        local allAssets = {}
-        for _, v in ipairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("Terrain") or v:IsA("Decal") then
-                table.insert(allAssets, v)
-            end
-        end
-
-        local total = #allAssets
-        if total > 0 then
-            for i = 1, total, BATCH_SIZE do
-                local batch = {}
-                for j = i, math.min(i + BATCH_SIZE - 1, total) do table.insert(batch, allAssets[j]) end
-                ContentProvider:PreloadAsync(batch)
-                local ratio = i / total
-                local percent = math.floor(ratio * 100)
-                label.Text = "OMEGA RENDERING: " .. percent .. "%"
-                subLabel.Text = "Loading Assets: " .. i .. " / " .. total
-                TweenService:Create(barFill, TweenInfo.new(0.1), {Size = UDim2.fromScale(ratio, 1)}):Play()
-                task.wait()
-            end
-            label.Text = "RENDER COMPLETE! 100%"
-            task.wait(1.5)
-        end
-        local tw = TweenService:Create(bg, TweenInfo.new(1), {BackgroundTransparency = 1})
-        for _, v in pairs(bg:GetDescendants()) do
-            if v:IsA("Frame") then TweenService:Create(v, TweenInfo.new(1), {BackgroundTransparency = 1}):Play() end
-            if v:IsA("TextLabel") then TweenService:Create(v, TweenInfo.new(1), {TextTransparency = 1}):Play() end
-        end
-        tw:Play(); tw.Completed:Connect(function() renderGui:Destroy() end)
-    end)
-end
-
--- [[ CORE UTILITIES ]]
-local function applyDeepClean()
-    pcall(function()
-        settings().Rendering.QualityLevel = 1
-        Lighting.GlobalShadows = false
-        Lighting.FogEnd = 9e9
-        for _, v in pairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
-                v.Material = Enum.Material.SmoothPlastic
-                v.Reflectance = 0
-                v.CastShadow = false
-                local name = v.Name:lower()
-                if name:find("tree") or name:find("grass") or name:find("bush") then v:Destroy() end
-            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") then
-                v:Destroy()
-            end
-        end
-    end)
-end
-
-local function closePrizePopup()
-    pcall(function()
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "DeltaAutoFarm" then
-                for _, btn in pairs(gui:GetDescendants()) do
-                    if (btn:IsA("ImageButton") or btn:IsA("TextButton")) and btn.Visible then
-                        local n = btn.Name:lower()
-                        if n == "x" or n:find("close") or n:find("exit") then
-                            local pos, size = btn.AbsolutePosition, btn.AbsoluteSize
-                            VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function getPlayerMoney()   
-    local leaderstats = LP:FindFirstChild("leaderstats")   
-    if leaderstats then   
-        local m = leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Cash")   
-        if m then return m.Value end   
-    end   
-    return 0   
-end   
-
--- [[ WEBHOOK SENDER ]]
-local function sendReport(gain)
-    pcall(function()
-        local data = {
-            ["embeds"] = {{
-                ["title"] = "🚀 RACE COMPLETED",
-                ["color"] = 65430,
-                ["fields"] = {
-                    {["name"] = "💰 Earned", ["value"] = "$" .. gain, ["inline"] = true},
-                    {["name"] = "📈 Total Profit", ["value"] = "$" .. totalMoneyEarned, ["inline"] = true},
-                    {["name"] = "🏁 Race Count", ["value"] = tostring(sessionRaces), ["inline"] = true},
-                },
-                ["footer"] = {["text"] = "V58.9 - " .. os.date("%X")}
-            }}
-        }
-        if httpRequest then
-            httpRequest({Url = MAIN_WEBHOOK, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)})
-        end
-    end)
-end
-
--- [[ UI SYSTEM ]]
-if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
-local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.ResetOnSpawn = false
-local frame = Instance.new("Frame", sg)   
-frame.Size = UDim2.new(0, 240, 0, 195); frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = Color3.fromRGB(18,18,18); frame.Active = true; frame.Draggable = true; frame.ClipsDescendants = true
-Instance.new("UICorner", frame)
-Instance.new("UIStroke", frame).Color = Color3.fromRGB(45,45,45)
-
-local header = Instance.new("Frame", frame); header.Size = UDim2.new(1, 0, 0, 35); header.BackgroundTransparency = 1
-local status = Instance.new("TextLabel", header); status.Size = UDim2.new(0.6, 0, 1, 0); status.Position = UDim2.new(0, 12, 0, 0); status.Text = "● READY"; status.TextColor3 = Color3.fromRGB(0, 255, 150); status.BackgroundTransparency = 1; status.Font = "GothamBold"; status.TextSize = 11; status.TextXAlignment = "Left"
-
-local content = Instance.new("Frame", frame); content.Size = UDim2.new(1, -20, 0, 150); content.Position = UDim2.new(0, 10, 0, 40); content.BackgroundTransparency = 1
-local layout = Instance.new("UIListLayout", content); layout.Padding = UDim.new(0, 6)
-
-local function createBtn(txt, color, parent)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(1, 0, 0, 32); b.BackgroundColor3 = color; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = "GothamBold"; b.TextSize = 10; b.BorderSizePixel = 0; Instance.new("UICorner", b)
-    return b
-end
-
-local farmBtn = createBtn("START AUTO FARMING", Color3.fromRGB(35,35,35), content)
-local renderBtn = createBtn("OMEGA FULL WORLD RENDER", Color3.fromRGB(0, 150, 100), content) 
-local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", Color3.fromRGB(35,35,35), content)
-local cpuBtn = createBtn("NEON DARK: OFF", Color3.fromRGB(35,35,35), content)
-
--- [[ BUTTON LOGIC ]]
-renderBtn.MouseButton1Click:Connect(function() startOmegaWorldRender() end)
-purgeBtn.MouseButton1Click:Connect(function() applyDeepClean() end)
-cpuBtn.MouseButton1Click:Connect(function()
-    renderingEnabled = not renderingEnabled
-    RunService:Set3dRenderingEnabled(renderingEnabled)
-    cpuBtn.Text = renderingEnabled and "NEON DARK: OFF" or "NEON DARK: ON"
-end)
-farmBtn.MouseButton1Click:Connect(function()
-    running = not running
-    farmBtn.Text = running and "STOP FARM" or "START AUTO FARMING"
-    farmBtn.BackgroundColor3 = running and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(35,35,35)
-end)
-
--- [[ MAIN AUTO FARM LOOP ]]
+--[ RGB LOGIC ]--
 task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if running then
-            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            local seat = hum and hum.SeatPart
-            if seat and seat:IsA("VehicleSeat") then
-                local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
-                
-                applyDeepClean()
-                closePrizePopup()
-                
-                -- Reset Velocity
-                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
-                
-                status.Text = "● WAITING RIVAL..."
-                local rivalFound = false
-                repeat 
-                    task.wait(1)
-                    if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
-                    for _, p in pairs(Players:GetPlayers()) do 
-                        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            if (p.Character.HumanoidRootPart.Position - startPos).Magnitude < 25 then rivalFound = true end 
-                        end
-                    end
-                until not running or rivalFound
-                
-                if running and rivalFound then
-                    moneyBeforeRace = getPlayerMoney()
-                    for i = 18, 1, -1 do 
-                        if not running then break end
-                        status.Text = "● START IN: "..i.."s"
-                        if seat then seat.AssemblyLinearVelocity = Vector3.new(0,0,0) end
-                        task.wait(1) 
-                    end
-                    
-                    if running then
-                        for i, d in ipairs(path) do
-                            if not running or not seat.Parent then break end
-                            status.Text = "● RACING: " .. i .. "/41"
-                            local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
-                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                            car:PivotTo(cf)
-                            task.wait(0.05)
-                            seat.AssemblyLinearVelocity = cf.LookVector * 165
-                            task.wait(1.6) -- Delay antar titik teleport
-                        end
-                        
-                        status.Text = "● FINISHING..."
-                        task.wait(3)
-                        
-                        local currentMoney = getPlayerMoney()
-                        local gain = currentMoney - moneyBeforeRace
-                        if gain > 0 then 
-                            totalMoneyEarned = totalMoneyEarned + gain
-                            sessionRaces = sessionRaces + 1
-                            sendReport(gain)
-                        end
-                        task.wait(2)
-                    end
-                end
-            else status.Text = "● SIT IN CAR!" end
+    local hue = 0
+    RunService.Heartbeat:Connect(function()
+        hue = hue + (1/300)
+        local rgb = Color3.fromHSV(hue % 1, 0.8, 1)
+        titleLabel.TextColor3 = rgb
+        barFill.BackgroundColor3 = rgb
+    end)
+end)
+
+--[ OPTIMIZED RENDERING LOGIC ]--
+local function startFastRender()
+    local assetsToRender = {}
+    local charPos = rootPart.Position
+    
+    -- Hanya ambil aset yang dekat dengan pemain (Hemat Waktu!)
+    for _, asset in ipairs(workspace:GetDescendants()) do
+        if asset:IsA("BasePart") then
+            if (asset.Position - charPos).Magnitude <= RENDER_RADIUS then
+                table.insert(assetsToRender, asset)
+            end
+        elseif asset:IsA("Texture") or asset:IsA("Decal") then
+            table.insert(assetsToRender, asset) -- Texture ringan, ambil saja
         end
     end
-end)
 
--- ANTI IDLE
-for _, v in pairs(getconnections(LP.Idled)) do v:Disable() end
+    local total = #assetsToRender
+    local startTime = tick()
+
+    if total == 0 then
+        timeLabel.Text = "NO ASSETS NEARBY"
+        task.wait(1)
+        screenGui:Destroy()
+        return
+    end
+
+    for i, asset in ipairs(assetsToRender) do
+        ContentProvider:PreloadAsync({asset})
+        
+        -- Update UI (Setiap 10 aset agar UI tetap smooth)
+        if i % 10 == 0 or i == total then
+            local progress = i / total
+            local elapsed = tick() - startTime
+            local remaining = math.ceil((elapsed / progress) - elapsed)
+            
+            barFill.Size = UDim2.fromScale(progress, 1)
+            timeLabel.Text = "ESTIMATED: " .. remaining .. "s"
+        end
+        
+        -- Batching agar tidak lag
+        if i % ASSETS_PER_WAIT == 0 then task.wait() end
+    end
+
+    timeLabel.Text = "AREA RENDERED!"
+    task.wait(0.5)
+    
+    -- Fade Out Cepat
+    TweenService:Create(background, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(titleLabel, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    TweenService:Create(timeLabel, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    TweenService:Create(barContainer, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+    local f = TweenService:Create(barFill, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+    f:Play()
+    f.Completed:Connect(function() screenGui:Destroy() end)
+end
+
+task.spawn(startFastRender)
