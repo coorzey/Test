@@ -1,17 +1,16 @@
 -- ==========================================  
 -- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- INTEGRATED: FAST RADIUS RENDERER (ULTRA LIGHT)
+-- UPDATE: STABLE DUAL WEBHOOK + CLOUD OPTIMIZED
+-- FIX: ANCHOR-LIKE POSITIONING (NO SLIDING)
 -- ==========================================  
-local Players = game:GetService("Players")    
-local LP = Players.LocalPlayer    
-local Workspace = game:GetService("Workspace")    
-local Lighting = game:GetService("Lighting")    
+local Players = game:GetService("Players")   
+local LP = Players.LocalPlayer   
+local Workspace = game:GetService("Workspace")   
+local Lighting = game:GetService("Lighting")   
 local VirtualUser = game:GetService("VirtualUser")
-local PlayerGui = LP:WaitForChild("PlayerGui")    
+local PlayerGui = LP:WaitForChild("PlayerGui")   
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
-local ContentProvider = game:GetService("ContentProvider") -- [ADDED] Untuk Rendering
-local TweenService = game:GetService("TweenService") -- [ADDED] Untuk Animasi UI
 
 -- [NEW] OPTIMIZATION GLOBALS
 local renderingEnabled = true
@@ -19,75 +18,6 @@ local function toggle3DRender(mode)
     renderingEnabled = mode
     RunService:Set3dRenderingEnabled(mode)
 end
-
--- [FUNGSI RENDER BARU - ULTRA FAST RADIUS]
-local function startFastAreaRender()
-    local RENDER_RADIUS = 120 -- Diperkecil lagi agar super cepat
-    local ASSETS_PER_WAIT = 300 -- Batch diperbesar agar instan
-    
-    local character = LP.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-
-    -- UI Rendering (Fullscreen Overlay)
-    local renderGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    renderGui.Name = "CorrZeyFastRender"
-    renderGui.IgnoreGuiInset = true
-    renderGui.DisplayOrder = 1000
-
-    local bg = Instance.new("Frame", renderGui)
-    bg.Size = UDim2.fromScale(1, 1)
-    bg.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
-    bg.BorderSizePixel = 0
-
-    local label = Instance.new("TextLabel", bg)
-    label.Size = UDim2.fromScale(1, 1)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBlack
-    label.TextSize = 35
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Text = "CORRZEY HUB\nFAST RENDERING AREA..."
-
-    -- RGB Effect on Title
-    task.spawn(function()
-        local h = 0
-        while renderGui.Parent do
-            h = h + (1/200)
-            label.TextColor3 = Color3.fromHSV(h % 1, 0.8, 1)
-            task.wait()
-        end
-    end)
-
-    task.spawn(function()
-        local assets = {}
-        local charPos = rootPart.Position
-        
-        for _, v in ipairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") then
-                if (v.Position - charPos).Magnitude <= RENDER_RADIUS then
-                    table.insert(assets, v)
-                end
-            elseif v:IsA("Texture") or v:IsA("Decal") then
-                table.insert(assets, v)
-            end
-        end
-
-        for i, v in ipairs(assets) do
-            ContentProvider:PreloadAsync({v})
-            if i % ASSETS_PER_WAIT == 0 then task.wait() end
-        end
-
-        label.Text = "RENDER COMPLETE!"
-        task.wait(0.5)
-        
-        local tw = TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-        TweenService:Create(label, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-        tw:Play()
-        tw.Completed:Connect(function() renderGui:Destroy() end)
-    end)
-end
-
--- [REMAINDER OF ORIGINAL SCRIPT - NO CHANGES BELOW]
 
 -- [NEW] AUTO MEMORY CLEANER
 task.spawn(function()
@@ -222,8 +152,7 @@ local clr_accent = Color3.fromRGB(255, 215, 0)
 local clr_btn_off = Color3.fromRGB(35, 35, 35)
 
 local frame = Instance.new("Frame", sg)   
-frame.Size = UDim2.new(0, 240, 0, 190); -- Ukuran diperbesar sedikit untuk tombol baru
-frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = clr_bg; frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
+frame.Size = UDim2.new(0, 240, 0, 155); frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = clr_bg; frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
 local mainStroke = Instance.new("UIStroke", frame); mainStroke.Color = clr_stroke; mainStroke.Thickness = 1.8; mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
@@ -235,7 +164,7 @@ task.spawn(function() while true do for i = 0, 1, 0.01 do rgbLabel.TextColor3 = 
 
 local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.Font = Enum.Font.GothamBold; toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", toggleBtn)
 
-local content = Instance.new("Frame", frame); content.Size = UDim2.new(1, -20, 0, 150); content.Position = UDim2.new(0, 10, 0, 40); content.BackgroundTransparency = 1; content.ZIndex = 2
+local content = Instance.new("Frame", frame); content.Size = UDim2.new(1, -20, 0, 110); content.Position = UDim2.new(0, 10, 0, 40); content.BackgroundTransparency = 1; content.ZIndex = 2
 local layout = Instance.new("UIListLayout", content); layout.Padding = UDim.new(0, 6); layout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local function createBtn(txt, color, parent)
@@ -245,7 +174,6 @@ local function createBtn(txt, color, parent)
 end
 
 local farmBtn = createBtn("START FARMING", clr_btn_off, content)
-local renderBtn = createBtn("FAST AREA RENDER", Color3.fromRGB(120, 0, 255), content) -- [ADDED] Tombol baru
 local purgeBtn = createBtn("PURGE ASSETS (LAG FIX)", clr_btn_off, content)
 local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, content)
 local dtStatusLabel = Instance.new("TextLabel", content); dtStatusLabel.Size = UDim2.new(1, 0, 0, 20); dtStatusLabel.Text = "DELAY: 0s"; dtStatusLabel.TextColor3 = Color3.new(0.6,0.6,0.6); dtStatusLabel.BackgroundTransparency = 1; dtStatusLabel.Font = Enum.Font.GothamBold; dtStatusLabel.TextSize = 10
@@ -388,7 +316,7 @@ end)
 toggleBtn.MouseButton1Click:Connect(function()   
     isMinimized = not isMinimized
     content.Visible = not isMinimized
-    frame:TweenSize(isMinimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 190), "Out", "Quad", 0.3, true)
+    frame:TweenSize(isMinimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 155), "Out", "Quad", 0.3, true)
     toggleBtn.Text = isMinimized and "+" or "−"
 end)
 
@@ -396,11 +324,6 @@ farmBtn.MouseButton1Click:Connect(function()
     running = not running
     farmBtn.Text = running and "STOP FARM" or "START FARMING"
     farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
-end)
-
--- [ADDED] Logic Tombol Render
-renderBtn.MouseButton1Click:Connect(function()
-    startFastAreaRender()
 end)
 
 cpuBtn.MouseButton1Click:Connect(function()
