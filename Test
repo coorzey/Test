@@ -1,391 +1,91 @@
--- ==========================================  
--- V58.6 FINAL REBORN - RGB CORRZEY HUB EDITION
--- UPDATE: SUPER AGGRESSIVE PURGE + FPS UNLOCK
--- FIX: FULL MAP CLEANING & BRIGHTNESS
--- ==========================================  
-local Players = game:GetService("Players")   
-local LP = Players.LocalPlayer   
-local Workspace = game:GetService("Workspace")   
-local Lighting = game:GetService("Lighting")   
-local VirtualUser = game:GetService("VirtualUser")
-local PlayerGui = LP:WaitForChild("PlayerGui")   
+-- ==========================================
+-- ULTIMATE FPS BOOSTER & MAP DESTROYER 2026
+-- ==========================================
+
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
 
--- [NEW] OPTIMIZATION GLOBALS
-local renderingEnabled = true
-local function toggle3DRender(mode)
-    renderingEnabled = mode
-    RunService:Set3dRenderingEnabled(mode)
+-- 1. FPS UNLOCKER & PERFORMANCE SETTINGS
+-- Mencoba mematikan batasan frame rate jika executor mendukung
+if setfpscap then
+    setfpscap(999) 
 end
 
--- [NEW] AUTO MEMORY CLEANER
-task.spawn(function()
-    while task.wait(60) do
-        collectgarbage("collect")
-    end
-end)
+settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
 
--- [REPLACED] SUPER ANTI-AFK
-for _, v in pairs(getconnections(LP.Idled)) do
-    v:Disable()
-end
-
-task.spawn(function()
-    while task.wait(20) do
-        pcall(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
-            VirtualUser:SetKeyDown("w")
-            task.wait(0.1)
-            VirtualUser:SetKeyUp("w")
-        end)
-    end
-end)
-
-local totalMoneyEarned, sessionRaces = 0, 0
-local moneyBeforeRace = 0
-local running, isMinimized = false, false
-
--- ==========================================
--- FUNGSI SUPER AGGRESSIVE PURGE (UPDATED)
--- ==========================================
-local function applyDeepClean()
-    pcall(function()
-        -- 1. FPS UNLOCKER
-        if setfpscap then setfpscap(999) end
-        settings().Rendering.QualityLevel = 1
-        settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
-
-        -- 2. FULL BRIGHT & LIGHTING FIX
-        Lighting.GlobalShadows = false
-        Lighting.FogEnd = 9e9
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-        
-        for _, effect in pairs(Lighting:GetChildren()) do
-            if effect:IsA("PostEffect") or effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("SunRaysEffect") or effect:IsA("Sky") then
-                effect:Destroy()
-            end
-        end
-
-        -- 3. MASSIVE OBJECT REMOVAL (RADIUS 10,000)
-        local TARGET_NAMES = {"tree", "leaf", "bush", "grass", "flower", "cloud", "building", "rock", "stone", "decor", "water", "prop", "fence", "bench", "particle", "smoke"}
-        
-        for _, v in pairs(Workspace:GetDescendants()) do
-            local name = v.Name:lower()
-            local isTrash = false
-            
-            for _, tName in pairs(TARGET_NAMES) do
-                if name:find(tName) then isTrash = true break end
-            end
-
-            if isTrash and not v:IsDescendantOf(LP.Character) then
-                v:Destroy()
-            elseif v:IsA("BasePart") and not v:IsDescendantOf(LP.Character) then
-                v.Material = Enum.Material.Plastic
-                v.Reflectance = 0
-                v.CastShadow = false
-            elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
-                v:Destroy()
-            end
-        end
-
-        -- 4. TERRAIN OPTIMIZATION
-        local t = Workspace:FindFirstChildOfClass("Terrain")
-        if t then
-            t.WaterWaveSize = 0
-            t.WaterWaveSpeed = 0
-            pcall(function() sethiddenproperty(t, "Decoration", false) end)
-        end
-    end)
-end
-
--- Menjaga objek baru agar tetap ter-purge (Anti-Lag Realtime)
-Workspace.DescendantAdded:Connect(function(v)
-    if not renderingEnabled then return end
-    pcall(function()
-        local name = v.Name:lower()
-        if name:find("tree") or name:find("grass") or name:find("cloud") or v:IsA("ParticleEmitter") then
-            v:Destroy()
-        end
-    end)
-end)
-
--- FUNGSI CLOSE PRIZE POPUP
-local function closePrizePopup()
-    pcall(function()
-        for _, gui in pairs(PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui.Enabled and gui.Name ~= "DeltaAutoFarm" then
-                for _, btn in pairs(gui:GetDescendants()) do
-                    if btn:IsA("ImageButton") or btn:IsA("TextButton") then
-                        local n = btn.Name:lower()
-                        local t = (btn:IsA("TextButton") and btn.Text:lower()) or ""
-                        
-                        if n == "x" or n:find("close") or t == "x" or t:find("close") or n:find("exit") then
-                            if btn.Visible and btn.AbsoluteSize.X > 0 then
-                                local pos = btn.AbsolutePosition
-                                local size = btn.AbsoluteSize
-                                VirtualUser:ClickButton1(Vector2.new(pos.X + (size.X/2), pos.Y + (size.Y/2) + 45))
-                                
-                                pcall(function()
-                                    for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
-                                    for _, conn in pairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
-                                    for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire() end
-                                end)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function getPlayerMoney()   
-    local leaderstats = LP:FindFirstChild("leaderstats")   
-    if leaderstats then   
-        local m = leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Cash")   
-        if m then return m.Value end   
-    end   
-    return 0   
-end   
-
--- KOORDINAT (PATH 1-41)
-local startPos = Vector3.new(3259.74, -15.28, 1014.49)   
-local startRot = -95.3   
-local path = {   
-    {pos = {3353.99, -15.28, 883.01}, rot = 68.97}, {pos = {3048.26, -15.26, 680.38}, rot = 68.89},
-    {pos = {2739.67, -15.11, 570.12}, rot = 70.95}, {pos = {2271.23, -1.68, 411.61}, rot = 73.02},
-    {pos = {1946.53, 14.22, 306.79}, rot = 71.72}, {pos = {1570.71, 20.61, 186.11}, rot = 74.46},
-    {pos = {1033.94, 20.61, 92.19}, rot = 87.54}, {pos = {688.36, 20.60, 85.04}, rot = 92.30},
-    {pos = {-24.31, 20.63, 84.78}, rot = 90.45}, {pos = {-583.41, 20.61, 88.00}, rot = 90.43},
-    {pos = {-1247.06, 16.11, 121.99}, rot = 101.03}, {pos = {-1910.41, -11.95, 276.76}, rot = 103.87},
-    {pos = {-2580.79, -8.75, 417.36}, rot = 101.97}, {pos = {-3175.10, 18.31, 542.23}, rot = 101.76},
-    {pos = {-3916.48, 23.47, 701.48}, rot = 101.44}, {pos = {-4630.57, 31.07, 839.62}, rot = 102.08},
-    {pos = {-5534.23, 19.75, 1038.44}, rot = 102.18}, 
-    {pos = {-6557.41, 9.80, 1251.38}, rot = 101.13}, {pos = {-7277.41, 9.80, 1406.79}, rot = 106.41}, 
-    {pos = {-7794.60, 9.80, 1579.01}, rot = 111.81}, {pos = {-8263.78, 9.56, 1777.35}, rot = 112.83}, 
-    {pos = {-8805.38, -8.88, 2007.14}, rot = 117.64}, {pos = {-9503.49, -69.46, 2303.26}, rot = 113.14}, 
-    {pos = {-10147.54, -111.81, 2578.72}, rot = 112.52}, {pos = {-10895.69, -105.88, 2903.48}, rot = 115.66}, 
-    {pos = {-11552.18, -54.42, 3172.93}, rot = 112.78}, {pos = {-12169.96, -17.11, 3435.86}, rot = 112.92}, 
-    {pos = {-12767.61, -1.50, 3748.61}, rot = 124.95}, {pos = {-13135.41, -0.86, 4062.97}, rot = 135.41}, 
-    {pos = {-13366.22, -0.84, 4319.31}, rot = 146.03}, {pos = {-13670.72, -2.93, 4750.70}, rot = 143.42}, 
-    {pos = {-14030.56, -13.39, 5288.52}, rot = 146.34}, {pos = {-14500.27, 3.01, 5985.70}, rot = 145.91}, 
-    {pos = {-14892.54, 6.83, 6582.37}, rot = 151.69}, {pos = {-15236.35, 6.83, 7290.60}, rot = 160.16}, 
-    {pos = {-15482.54, 3.89, 8031.16}, rot = 165.65}, {pos = {-15675.67, -7.72, 8668.23}, rot = 162.54}, 
-    {pos = {-15927.57, -20.54, 9489.28}, rot = 162.16}, {pos = {-16199.67, -2.75, 10369.70}, rot = 162.77}, 
-    {pos = {-16348.46, 8.41, 11025.66}, rot = 171.59}, {pos = {-16377.87, 8.41, 11227.66}, rot = 171.48}, 
-    {pos = {-16519.88, 10.92, 12115.18}, rot = 169.55}   
+-- 2. KONFIGURASI PENGHAPUSAN
+local TARGET_NAMES = {
+    "tree", "leaf", "bush", "grass", "flower", "cloud", "building", 
+    "rock", "stone", "decor", "water", "prop", "fence", "bench", 
+    "particle", "smoke", "fire", "sparkle", "dust", "atmosphere"
 }
 
--- [[ UI SYSTEM ]]
-if PlayerGui:FindFirstChild("DeltaAutoFarm") then PlayerGui.DeltaAutoFarm:Destroy() end   
-local sg = Instance.new("ScreenGui", PlayerGui); sg.Name = "DeltaAutoFarm"; sg.ResetOnSpawn = false
-
-local clr_bg = Color3.fromRGB(18, 18, 18)
-local clr_stroke = Color3.fromRGB(40, 40, 40)
-local clr_accent = Color3.fromRGB(255, 215, 0)
-local clr_btn_off = Color3.fromRGB(35, 35, 35)
-
-local frame = Instance.new("Frame", sg)   
-frame.Size = UDim2.new(0, 240, 0, 155); frame.Position = UDim2.new(0.5, -120, 0.4, 0); frame.BackgroundColor3 = clr_bg; frame.Active = true; frame.Draggable = true; frame.BorderSizePixel = 0; frame.ClipsDescendants = true
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-local mainStroke = Instance.new("UIStroke", frame); mainStroke.Color = clr_stroke; mainStroke.Thickness = 1.8; mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
-local header = Instance.new("Frame", frame); header.Size = UDim2.new(1, 0, 0, 35); header.BackgroundTransparency = 1; header.ZIndex = 2
-local status = Instance.new("TextLabel", header); status.Size = UDim2.new(0.5, 0, 1, 0); status.Position = UDim2.new(0, 12, 0, 0); status.Text = "● READY"; status.TextColor3 = Color3.fromRGB(0, 255, 150); status.BackgroundTransparency = 1; status.Font = Enum.Font.GothamBold; status.TextSize = 11; status.TextXAlignment = Enum.TextXAlignment.Left
-
-local rgbLabel = Instance.new("TextLabel", header); rgbLabel.Size = UDim2.new(0, 80, 1, 0); rgbLabel.Position = UDim2.new(1, -115, 0, 0); rgbLabel.Text = "CORRZEY HUB"; rgbLabel.BackgroundTransparency = 1; rgbLabel.Font = Enum.Font.GothamBold; rgbLabel.TextSize = 10; rgbLabel.TextXAlignment = Enum.TextXAlignment.Right
-task.spawn(function() while true do for i = 0, 1, 0.01 do rgbLabel.TextColor3 = Color3.fromHSV(i, 1, 1) task.wait(0.03) end end end)
-
-local toggleBtn = Instance.new("TextButton", header); toggleBtn.Size = UDim2.new(0, 24, 0, 24); toggleBtn.Position = UDim2.new(1, -30, 0, 5); toggleBtn.Text = "−"; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.Font = Enum.Font.GothamBold; toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", toggleBtn)
-
-local content = Instance.new("Frame", frame); content.Size = UDim2.new(1, -20, 0, 110); content.Position = UDim2.new(0, 10, 0, 40); content.BackgroundTransparency = 1; content.ZIndex = 2
-local layout = Instance.new("UIListLayout", content); layout.Padding = UDim.new(0, 6); layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-local function createBtn(txt, color, parent)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(1, 0, 0, 32); b.BackgroundColor3 = color; b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextSize = 10; b.BorderSizePixel = 0; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-    return b
-end
-
-local farmBtn = createBtn("START FARMING", clr_btn_off, content)
-local purgeBtn = createBtn("ULTIMATE PURGE (LAG FIX)", Color3.fromRGB(60, 0, 80), content)
-local cpuBtn = createBtn("NEON DARK: OFF", clr_btn_off, content)
-local dtStatusLabel = Instance.new("TextLabel", content); dtStatusLabel.Size = UDim2.new(1, 0, 0, 20); dtStatusLabel.Text = "DELAY: 0s"; dtStatusLabel.TextColor3 = Color3.new(0.6,0.6,0.6); dtStatusLabel.BackgroundTransparency = 1; dtStatusLabel.Font = Enum.Font.GothamBold; dtStatusLabel.TextSize = 10
-
--- MINI HUD
-local miniHud = Instance.new("Frame", sg); miniHud.Size = UDim2.new(0, 130, 0, 65); miniHud.Position = UDim2.new(0, 10, 0.02, 0); miniHud.BackgroundColor3 = Color3.fromRGB(10,10,10); miniHud.Draggable = true; miniHud.Active = true; Instance.new("UICorner", miniHud)
-local hs = Instance.new("UIStroke", miniHud); hs.Color = clr_accent; hs.Thickness = 1.2
-
-local function createHudLbl(txt, col, pos)
-    local l = Instance.new("TextLabel", miniHud); l.Size = UDim2.new(1, -20, 0, 20); l.Position = UDim2.new(0, 10, 0, pos); l.Text = txt; l.TextColor3 = col; l.Font = Enum.Font.GothamBold; l.TextSize = 10; l.BackgroundTransparency = 1; l.TextXAlignment = "Left"; return l
-end
-local moneyLabel = createHudLbl("Profit: $0", clr_accent, 5)
-local raceLabel = createHudLbl("Races: 0", Color3.new(1,1,1), 23)
-local fpsLabel = createHudLbl("FPS: 0", Color3.fromRGB(0, 255, 255), 41)
-
--- WEBHOOK CORE
-local MAIN_WEBHOOK = "https://discord.com/api/webhooks/1481553892113125437/9oPjRIpVq7AJYqTeGqweWZ5YpocFigu3zXUV-tv09l6ZnMo8qC96yHJ-HJnU18NMTsgo"
-local STATUS_WEBHOOK = "https://discord.com/api/webhooks/1481623547804647495/YZ72cByqWxrq0xHQpgsbiYC4PmRzJrWf5z51XWkPB1C6x5_gOQi_1PIXa97jV96kzrTr"
-
-local HttpService = game:GetService("HttpService")
-local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
-
-local function sendWebhook(url, gain, total, races, isOffline)
-    if not url or url == "" then return end
-    pcall(function()
-        local data = {
-            ["embeds"] = {{
-                ["title"] = isOffline and "⚠️ STUCK DETECTED" or "🚀 CORRZEY HUB - REPORT",
-                ["color"] = isOffline and 16711680 or 65430,
-                ["fields"] = {
-                    {["name"] = "👤 Player", ["value"] = "||" .. tostring(LP.Name) .. "||", ["inline"] = true},
-                    {["name"] = "💰 Race Profit", ["value"] = "```$" .. tostring(gain) .. "```", ["inline"] = true},
-                    {["name"] = "📈 Total Profit", ["value"] = "```$" .. tostring(total) .. "```", ["inline"] = true},
-                    {["name"] = "🏁 Total Races", ["value"] = tostring(races) .. " Races", ["inline"] = true},
-                },
-                ["footer"] = {["text"] = "V58.6 • " .. os.date("%X")},
-                ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
-            }}
-        }
-        local payload = HttpService:JSONEncode(data)
-        if httpRequest then
-            httpRequest({Url = url, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = payload})
-        else
-            HttpService:PostAsync(url, payload)
-        end
-    end)
-end
-
--- MAIN LOOP
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if running then
-            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            local seat = hum and hum.SeatPart
-            if seat and seat:IsA("VehicleSeat") then
-                local car = seat.Parent; while car and not car:IsA("Model") do car = car.Parent end
-                
-                closePrizePopup()
-                
-                -- [[ FIX: FORCE STOP BEFORE TELEPORT ]]
-                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                car:PivotTo(CFrame.new(startPos + Vector3.new(0,5,0)) * CFrame.Angles(0, math.rad(startRot), 0))
-                -- [[ FIX: DOUBLE RESET AFTER TELEPORT ]]
-                task.wait(0.05)
-                seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                
-                status.Text = "● WAITING RIVAL..."
-                local rivalFound = false
-                repeat 
-                    task.wait(1)
-                    if seat then
-                        seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                        seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                    end
-                    for _, p in pairs(Players:GetPlayers()) do 
-                        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            local rHum = p.Character:FindFirstChildOfClass("Humanoid")
-                            if (p.Character.HumanoidRootPart.Position - startPos).Magnitude < 25 and (rHum and rHum.SeatPart) then 
-                                rivalFound = true 
-                            end 
-                        end
-                    end
-                until not running or rivalFound
-                
-                if running and rivalFound then
-                    moneyBeforeRace = getPlayerMoney()
-                    for i = 18, 1, -1 do 
-                        if not running then break end
-                        status.Text = "● START IN: "..i.."s"
-                        if seat then
-                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                            seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                        end
-                        task.wait(1) 
-                    end
-                    
-                    if running then
-                        for i, d in ipairs(path) do
-                            if not running or not seat.Parent then break end
-                            status.Text = "● RACING: " .. i .. "/41"
-                            local cf = CFrame.new(d.pos[1], d.pos[2]+5, d.pos[3]) * CFrame.Angles(0, math.rad(d.rot), 0)
-                            seat.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                            seat.AssemblyAngularVelocity = Vector3.new(0,0,0)
-                            car:PivotTo(cf)
-                            task.wait(0.05)
-                            seat.AssemblyLinearVelocity = cf.LookVector * 165
-                            task.wait(math.random(15, 18)/10) 
-                        end
-                        
-                        status.Text = "● FINISHING..."
-                        task.wait(3)
-                        
-                        local currentMoney = getPlayerMoney()
-                        local gain = currentMoney - moneyBeforeRace
-                        
-                        if gain > 0 then 
-                            totalMoneyEarned = totalMoneyEarned + gain
-                            sessionRaces = sessionRaces + 1
-                            moneyLabel.Text = "Profit: $" .. totalMoneyEarned
-                            raceLabel.Text = "Races: " .. sessionRaces
-                            
-                            task.spawn(function()
-                                sendWebhook(MAIN_WEBHOOK, gain, totalMoneyEarned, sessionRaces, false)
-                            end)
-                        end
-                        task.wait(2)
-                    end
-                end
-            else status.Text = "● SIT IN CAR!" end
+-- 3. FUNGSI OPTIMASI AGRESIF (HAPUS TOTAL)
+local function ultraOptimize(obj)
+    -- Cek nama objek berdasarkan daftar target
+    local isTrash = false
+    for _, name in pairs(TARGET_NAMES) do
+        if obj.Name:lower():find(name) then
+            isTrash = true
+            break
         end
     end
-end)
 
--- BUTTON LOGIC
-toggleBtn.MouseButton1Click:Connect(function()   
-    isMinimized = not isMinimized
-    content.Visible = not isMinimized
-    frame:TweenSize(isMinimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 155), "Out", "Quad", 0.3, true)
-    toggleBtn.Text = isMinimized and "+" or "−"
-end)
-
-farmBtn.MouseButton1Click:Connect(function()
-    running = not running
-    farmBtn.Text = running and "STOP FARM" or "START FARMING"
-    farmBtn.BackgroundColor3 = running and Color3.fromRGB(180, 0, 0) or Color3.fromRGB(0, 120, 255)
-end)
-
-cpuBtn.MouseButton1Click:Connect(function()
-    renderingEnabled = not renderingEnabled
-    toggle3DRender(renderingEnabled)
-    cpuBtn.Text = renderingEnabled and "NEON DARK: OFF" or "NEON DARK: ON"
-end)
-
-purgeBtn.MouseButton1Click:Connect(function() 
-    applyDeepClean() 
-    purgeBtn.Text = "PURGE COMPLETED!"
-    task.wait(2)
-    purgeBtn.Text = "ULTIMATE PURGE (LAG FIX)"
-end)
-
-task.spawn(function()
-    local lastTime = tick()
-    local frameCount = 0
-    RunService.RenderStepped:Connect(function()
-        frameCount = frameCount + 1
-        if tick() - lastTime >= 1 then
-            fpsLabel.Text = "FPS: " .. frameCount
-            frameCount = 0
-            lastTime = tick()
+    if isTrash then
+        obj:Destroy()
+    elseif obj:IsA("BasePart") or obj:IsA("MeshPart") then
+        -- Objek yang tersisa dibuat se-ringan mungkin
+        obj.Material = Enum.Material.Plastic
+        obj.Reflectance = 0
+        obj.CastShadow = false
+        if obj:IsA("MeshPart") then
+            obj.RenderFidelity = Enum.RenderFidelity.Precise
         end
+    elseif obj:IsA("Decal") or obj:IsA("Texture") or obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+        obj:Destroy()
+    elseif obj:IsA("PostEffect") or obj:IsA("BloomEffect") or obj:IsA("BlurEffect") or obj:IsA("SunRaysEffect") then
+        obj:Destroy()
+    end
+end
+
+-- 4. FULL BRIGHT (Agar tidak gelap setelah lampu dihapus)
+local function activateFullBright()
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 14
+    Lighting.FogEnd = 100000
+    Lighting.GlobalShadows = false
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    
+    -- Memaksa cahaya tetap terang setiap saat
+    Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+        Lighting.ClockTime = 14
     end)
+end
+
+-- 5. EKSEKUSI MASSAL (Satu Map Full)
+print("Memulai pembersihan total...")
+
+for _, v in pairs(Workspace:GetDescendants()) do
+    pcall(function() ultraOptimize(v) end)
+end
+
+-- Menghapus objek baru yang muncul (StreamingEnabled)
+Workspace.DescendantAdded:Connect(function(v)
+    pcall(function() ultraOptimize(v) end)
 end)
 
-game:BindToClose(function() sendWebhook(STATUS_WEBHOOK, 0, totalMoneyEarned, sessionRaces, true) end)
+-- Mengoptimalkan Terrain Air jika ada
+if Workspace:FindFirstChildOfClass("Terrain") then
+    local t = Workspace.Terrain
+    t.WaterWaveSize = 0
+    t.WaterWaveSpeed = 0
+    t.WaterReflectance = 0
+    t.WaterTransparency = 0
+    -- Menghilangkan rumput 3D bawaan Roblox
+    pcall(function() sethiddenproperty(t, "Decoration", false) end)
+end
+
+activateFullBright()
+print("Selesai! Map telah digunduli dan FPS telah di-unlock.")
